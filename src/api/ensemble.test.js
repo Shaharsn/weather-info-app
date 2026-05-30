@@ -24,14 +24,14 @@ describe('parseEnsemble', () => {
   })
 
   it('keeps a model that has hourly data even if its daily high is missing', () => {
-    const ukmo = parseEnsemble(raw).find((m) => m.name === 'UKMO')
+    const ukmo = parseEnsemble(raw).find((m) => m.name === 'UKMO (Met Office)')
     expect(ukmo.highC).toBeNull()
     expect(ukmo.hourly['2026-05-30T16:00']).toBe(27.0)
   })
 
   it('omits models with neither high nor hourly data', () => {
     const models = parseEnsemble(raw)
-    expect(models.find((m) => m.name === 'JMA')).toBeUndefined()
+    expect(models.find((m) => m.name.startsWith('JMA'))).toBeUndefined()
   })
 
   it('accepts an array response (single location)', () => {
