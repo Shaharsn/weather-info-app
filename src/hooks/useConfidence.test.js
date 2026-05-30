@@ -3,12 +3,14 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { useConfidence } from './useConfidence.js'
 
 const target = { lat: 51.5, lon: 0.05, metnoHighC: 29.2 }
+// No-op cache by default so each test is isolated from real localStorage.
+const noCache = { readEnsembleCache: () => null, writeEnsembleCache: () => {} }
 
 describe('useConfidence', () => {
   it('does nothing until enabled', () => {
     const fetchStationEnsemble = vi.fn()
     const { result } = renderHook(() =>
-      useConfidence(target, false, { fetchStationEnsemble }),
+      useConfidence(target, false, { fetchStationEnsemble, ...noCache }),
     )
     expect(result.current.status).toBe('idle')
     expect(fetchStationEnsemble).not.toHaveBeenCalled()
@@ -21,21 +23,37 @@ describe('useConfidence', () => {
       { name: 'ICON', highC: 29.0, hourly: {} },
     ]
     const fetchStationEnsemble = vi.fn().mockResolvedValue(models)
+    const writeEnsembleCache = vi.fn()
     const { result } = renderHook(() =>
-      useConfidence(target, true, { fetchStationEnsemble }),
+      useConfidence(target, true, { fetchStationEnsemble, readEnsembleCache: () => null, writeEnsembleCache }),
     )
     await waitFor(() => expect(result.current.status).toBe('ready'))
-    // sites round to: ECMWF 29, GFS 28, ICON 29, MET Norway 29 -> median 29, 3/4 agree
     expect(result.current.agreement.consensusC).toBe(29)
     expect(result.current.agreement.agree).toBe(3)
     expect(result.current.agreement.pct).toBe(75)
-    expect(result.current.models).toBe(models) // passed through for the per-hour view
+    expect(result.current.models).toBe(models)
+    expect(writeEnsembleCache).toHaveBeenCalledWith(51.5, 0.05, models, expect.any(Number))
+  })
+
+  it('uses cached models without hitting the network', async () => {
+    const cached = [{ name: 'ECMWF', highC: 25, hourly: {} }, { name: 'GFS', highC: 25, hourly: {} }]
+    const fetchStationEnsemble = vi.fn()
+    const { result } = renderHook(() =>
+      useConfidence(target, true, {
+        fetchStationEnsemble,
+        readEnsembleCache: () => cached,
+        writeEnsembleCache: () => {},
+      }),
+    )
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(fetchStationEnsemble).not.toHaveBeenCalled()
+    expect(result.current.agreement.consensusC).toBe(25)
   })
 
   it('reports unavailable when the fetch fails', async () => {
     const fetchStationEnsemble = vi.fn().mockRejectedValue(new Error('429'))
     const { result } = renderHook(() =>
-      useConfidence(target, true, { fetchStationEnsemble }),
+      useConfidence(target, true, { fetchStationEnsemble, ...noCache }),
     )
     await waitFor(() => expect(result.current.status).toBe('unavailable'))
     expect(result.current.agreement).toBeNull()
@@ -43,7 +61,7 @@ describe('useConfidence', () => {
 
   it('skips fetching when coordinates are missing', () => {
     const fetchStationEnsemble = vi.fn()
-    renderHook(() => useConfidence({ highC: 29 }, true, { fetchStationEnsemble }))
+    renderHook(() => useConfidence({ highC: 29 }, true, { fetchStationEnsemble, ...noCache }))
     expect(fetchStationEnsemble).not.toHaveBeenCalled()
   })
 })
