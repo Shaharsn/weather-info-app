@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchStationEnsemble as defaultFetch } from '../api/ensemble.js'
+import { fetchNwsForecast as defaultFetchNws } from '../api/nws.js'
 import { computeAgreement } from '../lib/agreement.js'
 import {
   readEnsembleCache as defaultRead,
@@ -12,6 +13,7 @@ import {
 // target: { lat, lon, metnoHighC (MET Norway's own high, counted as a site) }
 export function useConfidence(target, enabled, deps = {}) {
   const fetchEnsemble = deps.fetchStationEnsemble ?? defaultFetch
+  const fetchNws = deps.fetchNwsForecast ?? defaultFetchNws
   const readCache = deps.readEnsembleCache ?? defaultRead
   const writeCache = deps.writeEnsembleCache ?? defaultWrite
   const nowMs = deps.nowMs ?? (() => Date.now())
@@ -36,8 +38,19 @@ export function useConfidence(target, enabled, deps = {}) {
     }
 
     setState({ status: 'loading', agreement: null, models: [] })
-    fetchEnsemble(target.lat, target.lon)
-      .then((models) => {
+    // Open-Meteo's multi-model set + NWS (US-only) in parallel. Each may fail
+    // independently (Open-Meteo rate-limit, NWS 404 outside the US) — we keep
+    // whatever returns, so US cities still get a second source when Open-Meteo is down.
+    Promise.all([
+      fetchEnsemble(target.lat, target.lon).catch(() => []),
+      fetchNws(target.lat, target.lon).catch(() => null),
+    ])
+      .then(([ensemble, nws]) => {
+        const models = [...ensemble, ...(nws ? [nws] : [])]
+        if (!models.length) {
+          if (!cancelled) setState({ status: 'unavailable', agreement: null, models: [] })
+          return
+        }
         writeCache(target.lat, target.lon, models, nowMs())
         settle(models)
       })
