@@ -2,7 +2,7 @@ export function cToF(c) {
   return (c * 9) / 5 + 32
 }
 
-export function formatBoth(c) {
+export function formatBoth(c, decimals = 2) {
   if (c === null || c === undefined || Number.isNaN(c)) return '—'
-  return `${Math.round(c)}°C / ${Math.round(cToF(c))}°F`
+  return `${c.toFixed(decimals)}°C / ${cToF(c).toFixed(decimals)}°F`
 }

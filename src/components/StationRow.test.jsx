@@ -16,8 +16,8 @@ describe('StationRow', () => {
     render(<StationRow row={base} />)
     expect(screen.getByText('Seoul')).toBeInTheDocument()
     expect(screen.getByText('07:00')).toBeInTheDocument() // local time
-    expect(screen.getByText('12°C / 54°F')).toBeInTheDocument() // now
-    expect(screen.getByText('18°C / 64°F')).toBeInTheDocument() // today high
+    expect(screen.getByText('12.40°C / 54.32°F')).toBeInTheDocument() // now
+    expect(screen.getByText('18.00°C / 64.40°F')).toBeInTheDocument() // today high
   })
   it('hides hourly detail until expanded, shows after click', () => {
     render(<StationRow row={base} />)

@@ -8,11 +8,14 @@ describe('cToF', () => {
 })
 
 describe('formatBoth', () => {
-  it('formats both units rounded to whole degrees', () => {
-    expect(formatBoth(21)).toBe('21°C / 70°F')
+  it('formats both units to two decimals by default', () => {
+    expect(formatBoth(21)).toBe('21.00°C / 69.80°F')
   })
   it('handles negatives', () => {
-    expect(formatBoth(-5)).toBe('-5°C / 23°F')
+    expect(formatBoth(-5)).toBe('-5.00°C / 23.00°F')
+  })
+  it('accepts a custom decimal count', () => {
+    expect(formatBoth(23.6, 1)).toBe('23.6°C / 74.5°F')
   })
   it('renders a dash for null/undefined', () => {
     expect(formatBoth(null)).toBe('—')

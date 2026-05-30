@@ -15,7 +15,7 @@ describe('HourlyStrip', () => {
   it('renders each hour with its label and both units', () => {
     render(<HourlyStrip row={row} />)
     expect(screen.getByText('06:00')).toBeInTheDocument()
-    expect(screen.getByText('12°C / 54°F')).toBeInTheDocument()
+    expect(screen.getByText('12.00°C / 53.60°F')).toBeInTheDocument()
   })
   it('marks observed hours distinctly from forecast hours', () => {
     const { container } = render(<HourlyStrip row={row} />)
@@ -26,8 +26,8 @@ describe('HourlyStrip', () => {
     const { container } = render(<HourlyStrip row={row} />) // temps 12 and 16
     const hot = container.querySelector('.hour.hot')
     const cold = container.querySelector('.hour.cold')
-    expect(hot).toHaveTextContent('16°C')
-    expect(cold).toHaveTextContent('12°C')
+    expect(hot).toHaveTextContent('16.00°C')
+    expect(cold).toHaveTextContent('12.00°C')
     expect(container.querySelectorAll('.hour.hot')).toHaveLength(1)
     expect(container.querySelectorAll('.hour.cold')).toHaveLength(1)
   })
@@ -51,7 +51,7 @@ describe('HourlyStrip', () => {
   it('shows tomorrow high/low', () => {
     render(<HourlyStrip row={row} />)
     expect(screen.getByText(/Tomorrow/)).toBeInTheDocument()
-    expect(screen.getByText('19°C / 66°F')).toBeInTheDocument()
+    expect(screen.getByText('19.00°C / 66.20°F')).toBeInTheDocument()
   })
   it('renders model agreement when confidence is ready', () => {
     const confidence = {
