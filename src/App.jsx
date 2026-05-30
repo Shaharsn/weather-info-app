@@ -3,7 +3,8 @@ import { useWeather } from './hooks/useWeather.js'
 import StationRow from './components/StationRow.jsx'
 
 export default function App() {
-  const { rows, status, lastUpdated, forecastError, refresh } = useWeather(STATIONS)
+  const { rows, status, lastUpdated, forecastError, forecastStaleSince, refresh } =
+    useWeather(STATIONS)
 
   return (
     <div className="app">
@@ -20,6 +21,12 @@ export default function App() {
       {status === 'loading' && rows.length === 0 && <p className="notice">Loading…</p>}
       {status === 'error' && rows.length === 0 && (
         <p className="notice error">Failed to load weather data. Try Refresh.</p>
+      )}
+      {status === 'ready' && forecastStaleSince && (
+        <p className="notice warn">
+          Live forecast temporarily unavailable (rate-limited) — showing the cached forecast from{' '}
+          {forecastStaleSince.toLocaleTimeString()}. Current temps and local times are live.
+        </p>
       )}
       {status === 'ready' && forecastError && (
         <p className="notice warn">

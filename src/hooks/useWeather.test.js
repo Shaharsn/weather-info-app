@@ -16,6 +16,10 @@ function makeDeps() {
     fetchMetar: vi.fn().mockResolvedValue({ RKSI: { tempC: 19.5, obsTime: 1 } }),
     fetchForecast: vi.fn().mockResolvedValue([fxLoc, fxLoc]),
     nowEpoch: () => Math.floor(Date.UTC(2026, 4, 29, 12, 0) / 1000),
+    nowMs: () => 0,
+    // Cache injected per-test so cases stay isolated from real localStorage.
+    readForecastCache: () => null,
+    writeForecastCache: () => {},
   }
 }
 
@@ -57,5 +61,25 @@ describe('useWeather', () => {
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(result.current.rows).toHaveLength(2)
     expect(result.current.rows.every((r) => r.now.source === 'forecast')).toBe(true)
+  })
+
+  it('falls back to a cached forecast when the live fetch fails', async () => {
+    const deps = makeDeps()
+    deps.fetchForecast = vi.fn().mockRejectedValue(new Error('rate limited'))
+    deps.readForecastCache = vi.fn().mockReturnValue({ savedAt: 0, fxArr: [fxLoc, fxLoc] })
+    const { result } = renderHook(() => useWeather(stations, deps))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.forecastError).toBe(false) // cache covered it
+    expect(result.current.forecastStaleSince).toBeInstanceOf(Date)
+    expect(result.current.rows[0].forecastMissing).toBe(false) // forecast present from cache
+    expect(result.current.rows[0].todayHighC).toBe(25)
+  })
+
+  it('caches a successful forecast for later fallback', async () => {
+    const deps = makeDeps()
+    deps.writeForecastCache = vi.fn()
+    const { result } = renderHook(() => useWeather(stations, deps))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(deps.writeForecastCache).toHaveBeenCalledWith([fxLoc, fxLoc], 0)
   })
 })
