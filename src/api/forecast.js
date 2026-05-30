@@ -1,3 +1,5 @@
+import { fetchJson } from './http.js'
+
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
 // Set from backtest winner (run 2026-05-30, MAE 0.659C). '' would mean best_match (default).
 export const FORECAST_MODEL = 'ecmwf_ifs025'
@@ -33,7 +35,5 @@ export async function fetchForecast(stations) {
     timezone: 'auto',
   })
   if (FORECAST_MODEL) params.set('models', FORECAST_MODEL)
-  const res = await fetch(`${FORECAST_URL}?${params}`)
-  if (!res.ok) throw new Error(`Forecast fetch failed: ${res.status}`)
-  return parseForecast(await res.json())
+  return parseForecast(await fetchJson(`${FORECAST_URL}?${params}`))
 }
