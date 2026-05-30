@@ -1,0 +1,4 @@
+[
+  { "icaoId": "RKSI", "temp": 12.0, "obsTime": 1748520000, "name": "Incheon Intl" },
+  { "icaoId": "KHOU", "temp": 28.3, "obsTime": 1748520600, "name": "Hobby" }
+]
