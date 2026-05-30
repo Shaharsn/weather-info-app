@@ -44,6 +44,15 @@ describe('buildStationData', () => {
     expect(r.tomorrowHighC).toBe(19)
     expect(r.tomorrowLowC).toBe(7.5)
   })
+  it('raises today high to the observed Now when the forecast max lags it', () => {
+    // METAR reads 24 but forecast daily max is only 18 -> high should be 24, not 18.
+    const r = buildStationData(station, { tempC: 24, obsTime: 100 }, fx, nowEpoch)
+    expect(r.todayHighC).toBe(24)
+  })
+  it('keeps the forecast high when it already exceeds Now', () => {
+    const r = buildStationData(station, { tempC: 12, obsTime: 100 }, fx, nowEpoch)
+    expect(r.todayHighC).toBe(18)
+  })
   it('marks error when forecast missing', () => {
     const r = buildStationData(station, undefined, null, nowEpoch)
     expect(r.error).toBeTruthy()

@@ -25,6 +25,13 @@ export function buildStationData(station, metar, fx, nowEpoch) {
     ? { tempC: metar.tempC, source: 'metar', obsTime: metar.obsTime }
     : { tempC: fx.currentC, source: 'forecast', obsTime: null }
 
+  // Today's high must never read lower than the temperature we're actually
+  // measuring now: the forecast model's daily max can lag a live observation.
+  const todayHighC =
+    fx.todayHighC != null && now.tempC != null
+      ? Math.max(fx.todayHighC, now.tempC)
+      : fx.todayHighC
+
   const today = localDateStr(nowEpoch, fx.utcOffsetSeconds)
   const hourly = fx.hourly
     .filter((h) => h.time.slice(0, 10) === today)
@@ -37,7 +44,7 @@ export function buildStationData(station, metar, fx, nowEpoch) {
   return {
     city: station.city, stationLabel: station.stationLabel, icao: station.icao,
     now,
-    todayHighC: fx.todayHighC,
+    todayHighC,
     tomorrowHighC: fx.tomorrowHighC,
     tomorrowLowC: fx.tomorrowLowC,
     hourly, hasObs, error: null,
