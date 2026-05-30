@@ -1,29 +1,47 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+
+const mkRow = (city, stationLabel) => ({
+  city, stationLabel, icao: 'X',
+  now: { tempC: 12, source: 'metar', obsTime: 1 },
+  localTime: '12:00', todayHighC: 18, tomorrowHighC: 19, tomorrowLowC: 7,
+  hourly: [], hasObs: true, forecastMissing: false, error: null,
+})
 
 vi.mock('./hooks/useWeather.js', () => ({
   useWeather: () => ({
     status: 'ready',
     lastUpdated: new Date('2026-05-29T12:00:00Z'),
+    forecastError: false,
+    forecastStaleSince: null,
     refresh: vi.fn(),
-    rows: [
-      {
-        city: 'Seoul', stationLabel: 'Incheon', icao: 'RKSI',
-        now: { tempC: 12, source: 'metar', obsTime: 1 },
-        todayHighC: 18, tomorrowHighC: 19, tomorrowLowC: 7,
-        hourly: [], hasObs: true, error: null,
-      },
-    ],
+    rows: [mkRow('Seoul', 'Incheon Intl Airport'), mkRow('London', 'London City Airport')],
   }),
 }))
 
 import App from './App.jsx'
 
 describe('App', () => {
-  it('renders header and a row from the hook', async () => {
+  it('renders header and rows from the hook', async () => {
     render(<App />)
     await waitFor(() => expect(screen.getByText('Seoul')).toBeInTheDocument())
+    expect(screen.getByText('London')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument()
-    expect(screen.getByText(/Last updated/i)).toBeInTheDocument()
+    expect(screen.getByText(/Updated/i)).toBeInTheDocument()
+  })
+
+  it('filters the list by the search query (city or station)', () => {
+    render(<App />)
+    const search = screen.getByRole('searchbox', { name: /search places/i })
+    fireEvent.change(search, { target: { value: 'lond' } })
+    expect(screen.getByText('London')).toBeInTheDocument()
+    expect(screen.queryByText('Seoul')).not.toBeInTheDocument()
+  })
+
+  it('shows a no-matches message when nothing matches', () => {
+    render(<App />)
+    const search = screen.getByRole('searchbox', { name: /search places/i })
+    fireEvent.change(search, { target: { value: 'zzzzz' } })
+    expect(screen.getByText(/No places match/i)).toBeInTheDocument()
   })
 })

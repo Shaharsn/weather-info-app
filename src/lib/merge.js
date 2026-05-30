@@ -82,7 +82,16 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
         .map((h) => ({ time: h.time, tempC: h.tempC, observed: false }))
     : []
 
-  const hourly = [...observedHours, ...forecastHours].sort((a, b) => (a.time < b.time ? -1 : 1))
+  // Always include a card for the current hour. If there's no observation for it,
+  // it shows "TBD" rather than being omitted.
+  const nowHourKey = localHourStr(nowEpoch, offset)
+  const nowPlaceholder = observedKeys.has(nowHourKey)
+    ? []
+    : [{ time: nowHourKey, tempC: null, observed: false, isNow: true }]
+
+  const hourly = [...observedHours, ...nowPlaceholder, ...forecastHours].sort((a, b) =>
+    a.time < b.time ? -1 : 1,
+  )
 
   // Today's high reflects the real observed peak, the live "now", and the forecast max.
   const todayHighC = maxDefined(fx?.todayHighC, now.tempC, observedMax)

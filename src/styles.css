@@ -1,31 +1,117 @@
-:root { color-scheme: light dark; }
+:root {
+  color-scheme: dark;
+  --bg: #0c0f16;
+  --panel: #141a24;
+  --panel-2: #1a212e;
+  --border: #232c3b;
+  --text: #e7ebf3;
+  --muted: #97a2b6;
+  --hot: #ff7a70;
+  --cold: #62a8ff;
+  --warm-badge: #ffd479;
+  --observed: #7ee0a0;
+}
+
 * { box-sizing: border-box; }
-body { font-family: system-ui, sans-serif; margin: 0; background: #0f1115; color: #e8eaed; }
-.app { max-width: 80%; margin: 0 auto; padding: 16px; }
-.app-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.app-header h1 { font-size: 20px; }
-.controls { display: flex; align-items: center; gap: 12px; }
-.controls .updated { font-size: 12px; opacity: 0.7; }
-.controls button { padding: 6px 12px; border-radius: 8px; border: 1px solid #3a3f4b; background: #1b1f27; color: inherit; cursor: pointer; }
-.notice { padding: 8px; }
-.notice.error { color: #ff8a80; }
-.notice.warn { color: #ffd479; font-size: 13px; }
-.list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
-.station-row { border: 1px solid #262b35; border-radius: 10px; background: #151922; overflow: hidden; }
-.row-main { display: flex; align-items: center; gap: 14px; width: 100%; padding: 10px 12px; background: none; border: none; color: inherit; cursor: pointer; text-align: left; font-size: 14px; }
-.row-main .caret { width: 12px; opacity: 0.7; }
-.row-main .city { font-weight: 600; min-width: 110px; }
-.row-main .station-label { opacity: 0.7; flex: 1; }
-.row-main .metric em { font-style: normal; opacity: 0.6; margin-right: 4px; font-size: 12px; }
-.badge { font-size: 11px; padding: 2px 6px; border-radius: 6px; background: #3a2f12; color: #ffd479; }
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  margin: 0;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, #16213a 0%, transparent 60%),
+    var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.app { max-width: 80%; margin: 0 auto; padding: 20px 16px 48px; }
+
+.app-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.app-header h1 { font-size: 20px; font-weight: 650; letter-spacing: 0.2px; }
+.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.controls .updated { font-size: 12px; color: var(--muted); }
+
+.search {
+  padding: 7px 12px; min-width: 200px;
+  border-radius: 9px; border: 1px solid var(--border);
+  background: var(--panel); color: inherit; font-size: 13px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search::placeholder { color: var(--muted); }
+.search:focus {
+  outline: none; border-color: #3a6df0;
+  box-shadow: 0 0 0 3px rgba(58, 109, 240, 0.18);
+}
+
+.controls button {
+  padding: 7px 14px; border-radius: 9px; border: 1px solid var(--border);
+  background: var(--panel-2); color: inherit; cursor: pointer; font-size: 13px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.controls button:hover { background: #232c3b; border-color: #33405a; }
+
+.notice { padding: 8px 4px; font-size: 14px; }
+.notice.error { color: var(--hot); }
+.notice.warn { color: var(--warm-badge); font-size: 13px; }
+
+.list { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; }
+
+.station-row {
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--panel); overflow: hidden;
+  transition: border-color 0.15s, background 0.15s;
+}
+.station-row:hover { border-color: #2e3a4f; }
+
+.row-main {
+  display: flex; align-items: center; gap: 16px; width: 100%;
+  padding: 11px 14px; background: none; border: none; color: inherit;
+  cursor: pointer; text-align: left; font-size: 14px;
+}
+.row-main:hover { background: rgba(255, 255, 255, 0.02); }
+.row-main .caret { width: 12px; color: var(--muted); }
+.row-main .city { font-weight: 650; min-width: 120px; }
+.row-main .station-label { color: var(--muted); flex: 1; }
+.row-main .metric { white-space: nowrap; }
+.row-main .metric em {
+  font-style: normal; color: var(--muted); margin-right: 5px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
+}
+
+.badge {
+  font-size: 11px; padding: 2px 7px; border-radius: 6px;
+  background: rgba(255, 212, 121, 0.14); color: var(--warm-badge);
+}
 .station-row.error .row-main { cursor: default; }
-.row-error { color: #ff8a80; }
-.hourly-strip { padding: 10px 14px; border-top: 1px solid #262b35; }
-.obs-time { font-size: 12px; opacity: 0.6; margin-bottom: 8px; }
-.hours { display: flex; flex-wrap: wrap; gap: 6px; }
-.hour { display: flex; flex-direction: column; padding: 6px 8px; border-radius: 8px; font-size: 12px; min-width: 92px; }
-.hour.observed { background: #16261b; }
-.hour.forecast { background: #1a2030; }
-.hour .hour-label { font-weight: 600; }
-.hour .hour-tag { opacity: 0.55; font-size: 10px; }
-.tomorrow { margin-top: 10px; font-size: 13px; opacity: 0.9; }
+.row-error { color: var(--hot); }
+
+.hourly-strip { padding: 12px 14px 14px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.15); }
+.obs-time { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.hours { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.hour {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 7px 9px; border-radius: 9px; font-size: 12px; min-width: 96px;
+  background: var(--panel-2); border: 1px solid var(--border);
+}
+.hour.forecast { opacity: 0.82; }
+.hour.now { border-style: dashed; border-color: #4a5168; }
+.hour .hour-label { font-weight: 650; }
+.hour .hour-temp { font-weight: 600; }
+.hour .hour-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); }
+.hour.observed .hour-tag { color: var(--observed); }
+.hour.now .hour-tag { color: var(--warm-badge); }
+
+/* highest = red, lowest = blue */
+.hour.hot { box-shadow: inset 0 2px 0 var(--hot); border-color: rgba(255, 122, 112, 0.5); }
+.hour.hot .hour-temp { color: var(--hot); }
+.hour.cold { box-shadow: inset 0 2px 0 var(--cold); border-color: rgba(98, 168, 255, 0.5); }
+.hour.cold .hour-temp { color: var(--cold); }
+
+.tomorrow { margin-top: 12px; font-size: 13px; color: var(--muted); }
+.tomorrow strong { color: var(--text); }
+.hot-text { color: var(--hot); font-weight: 600; }
+.cold-text { color: var(--cold); font-weight: 600; }

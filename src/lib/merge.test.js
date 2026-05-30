@@ -69,6 +69,22 @@ describe('buildStationData', () => {
     expect(r.localTime).toBe('07:00')
   })
 
+  it('adds a TBD placeholder for the current hour when it has no observation', () => {
+    // series has 00:00 and 06:00 but NOT the current 07:00 hour
+    const gap = [
+      { obsTime: at(2026, 4, 28, 15, 0), tempC: 8 }, // Seoul 00:00
+      { obsTime: at(2026, 4, 28, 21, 0), tempC: 11 }, // Seoul 06:00
+    ]
+    const r = buildStationData(station, gap, fx, nowEpoch)
+    const nowCard = r.hourly.find((h) => h.time === '2026-05-29T07:00')
+    expect(nowCard).toMatchObject({ tempC: null, isNow: true })
+  })
+
+  it('does not add a placeholder when the current hour is observed', () => {
+    const r = buildStationData(station, series, fx, nowEpoch) // has 07:00 obs
+    expect(r.hourly.filter((h) => h.isNow)).toHaveLength(0)
+  })
+
   it('still shows observed hours + local time when the forecast is missing', () => {
     const r = buildStationData(station, series, null, nowEpoch)
     expect(r.forecastMissing).toBe(true)
