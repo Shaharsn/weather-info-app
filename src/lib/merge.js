@@ -10,11 +10,17 @@ function localDateStr(epochSec, utcOffsetSeconds) {
   return new Date((epochSec + utcOffsetSeconds) * 1000).toISOString().slice(0, 10)
 }
 
+// Wall-clock "HH:MM" at the station's local time for the given UTC epoch.
+function localTimeStr(epochSec, utcOffsetSeconds) {
+  return new Date((epochSec + utcOffsetSeconds) * 1000).toISOString().slice(11, 16)
+}
+
 export function buildStationData(station, metar, fx, nowEpoch) {
   if (!fx) {
     return {
       city: station.city, stationLabel: station.stationLabel, icao: station.icao,
       now: { tempC: null, source: null, obsTime: null },
+      localTime: null,
       todayHighC: null, tomorrowHighC: null, tomorrowLowC: null,
       hourly: [], hasObs: false, error: 'No forecast data',
     }
@@ -44,6 +50,7 @@ export function buildStationData(station, metar, fx, nowEpoch) {
   return {
     city: station.city, stationLabel: station.stationLabel, icao: station.icao,
     now,
+    localTime: localTimeStr(nowEpoch, fx.utcOffsetSeconds),
     todayHighC,
     tomorrowHighC: fx.tomorrowHighC,
     tomorrowLowC: fx.tomorrowLowC,

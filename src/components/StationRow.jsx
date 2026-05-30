@@ -23,6 +23,7 @@ export default function StationRow({ row }) {
         <span className="caret">{open ? '▾' : '▸'}</span>
         <span className="city">{row.city}</span>
         <span className="station-label">{row.stationLabel}</span>
+        <span className="metric"><em>Local</em> {row.localTime}</span>
         <span className="metric"><em>Now</em> {formatBoth(row.now.tempC)}</span>
         <span className="metric"><em>High</em> {formatBoth(row.todayHighC)}</span>
         <span className="metric"><em>Tmrw</em> {formatBoth(row.tomorrowHighC)}</span>

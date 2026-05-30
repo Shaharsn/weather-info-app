@@ -53,6 +53,11 @@ describe('buildStationData', () => {
     const r = buildStationData(station, { tempC: 12, obsTime: 100 }, fx, nowEpoch)
     expect(r.todayHighC).toBe(18)
   })
+  it("computes the station's local time at refresh", () => {
+    // now = 2026-05-29T07:00 Seoul local (+9h) -> "07:00"
+    const r = buildStationData(station, undefined, fx, nowEpoch)
+    expect(r.localTime).toBe('07:00')
+  })
   it('marks error when forecast missing', () => {
     const r = buildStationData(station, undefined, null, nowEpoch)
     expect(r.error).toBeTruthy()
