@@ -17,8 +17,10 @@ export default function App() {
         </div>
       </header>
 
-      {status === 'loading' && <p className="notice">Loading…</p>}
-      {status === 'error' && <p className="notice error">Failed to load weather data. Try Refresh.</p>}
+      {status === 'loading' && rows.length === 0 && <p className="notice">Loading…</p>}
+      {status === 'error' && rows.length === 0 && (
+        <p className="notice error">Failed to load weather data. Try Refresh.</p>
+      )}
 
       <div className="list">
         {rows.map((row) => (
