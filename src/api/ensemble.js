@@ -4,13 +4,21 @@ import { fetchJson } from './http.js'
 // expanded city only. Gives both each model's today-high (for the consensus) and
 // its hourly values (for the per-hour "by source" breakdown). If this request
 // fails (e.g. rate-limited), confidence and the breakdown are simply not shown.
+// As many reputable global models as Open-Meteo exposes. Models that don't cover
+// a given location (or return no data) are dropped per-location by parseEnsemble.
+// UKMO is the UK Met Office's model; these are the same models sites like
+// AccuWeather / Wunderground blend.
 const MODELS = [
   { id: 'ecmwf_ifs025', name: 'ECMWF' },
-  { id: 'gfs_seamless', name: 'GFS' },
-  { id: 'icon_seamless', name: 'ICON' },
-  { id: 'gem_seamless', name: 'GEM' },
-  { id: 'ukmo_seamless', name: 'UKMO' },
-  { id: 'jma_seamless', name: 'JMA' },
+  { id: 'gfs_seamless', name: 'GFS (NOAA)' },
+  { id: 'icon_seamless', name: 'ICON (DWD)' },
+  { id: 'gem_seamless', name: 'GEM (Canada)' },
+  { id: 'ukmo_seamless', name: 'UKMO (Met Office)' },
+  { id: 'jma_seamless', name: 'JMA (Japan)' },
+  { id: 'meteofrance_seamless', name: 'Météo-France' },
+  { id: 'kma_seamless', name: 'KMA (Korea)' },
+  { id: 'cma_grapes_global', name: 'CMA (China)' },
+  { id: 'bom_access_global', name: 'BOM (Australia)' },
 ]
 
 // Pure: raw multi-model response -> [{ name, highC, hourly: { localTime: tempC } }]
