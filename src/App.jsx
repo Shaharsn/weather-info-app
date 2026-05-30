@@ -21,6 +21,12 @@ export default function App() {
       {status === 'error' && rows.length === 0 && (
         <p className="notice error">Failed to load weather data. Try Refresh.</p>
       )}
+      {status === 'error' && rows.length > 0 && (
+        <p className="notice warn">
+          Couldn’t refresh just now (the weather service may be rate-limited) — showing the last
+          loaded data. Try Refresh again in a minute.
+        </p>
+      )}
 
       <div className="list">
         {rows.map((row) => (
