@@ -108,8 +108,21 @@ One-time Node script (re-runnable), **not a live app feature**:
 5. Select the lowest-error model. **Record the chosen model in this spec and hard-set it in
    `src/api/forecast.js`.**
 
-> The numeric result of this backtest is filled into §4-Result during implementation, before
-> the forecast layer is finalized.
+### §4-Result (run 2026-05-30)
+
+Sample: Seoul, London, Miami, Sao Paulo, Tokyo, Cape Town, Helsinki, Tel Aviv.
+Hourly `temperature_2m` over the prior 14 days, scored by mean absolute error vs ERA5 actuals:
+
+| Model | MAE (°C) |
+|-------|----------|
+| **ecmwf_ifs025** | **0.659** |
+| icon_seamless | 0.872 |
+| best_match | 0.941 |
+| gfs_seamless | 1.173 |
+
+**Winner: `ecmwf_ifs025`** (ECMWF IFS 0.25°). This is hard-set as `FORECAST_MODEL` in
+`src/api/forecast.js`. (Note: the model id `ecmwf_ifs04` returns no data on the
+historical-forecast API; `ecmwf_ifs025` is the correct current id.)
 
 ## 5. Components / files
 
