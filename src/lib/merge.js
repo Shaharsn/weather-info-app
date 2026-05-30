@@ -50,7 +50,8 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
   const series = Array.isArray(metarSeries) ? metarSeries : []
   const localTime = station.tz ? localTimeInZone(nowEpoch, station.tz) : null
 
-  const latest = series.length ? series[series.length - 1] : null
+  // Most recent observation (robust to unsorted input, though series is sorted).
+  const latest = series.length ? series.reduce((a, b) => (b.obsTime > a.obsTime ? b : a)) : null
   const hasObs = !!latest
   let now
   if (hasObs) {
@@ -81,7 +82,15 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
     time, tempC: o.tempC, observed: true,
   }))
   const observedKeys = new Set(obsByHour.keys())
-  const observedMax = maxDefined(...observedHours.map((h) => h.tempC))
+  // "Today's high" is a daytime concept. Count observed peaks only from 6am local
+  // so an overnight/pre-dawn warm spike (e.g. a passing front) can't masquerade
+  // as the day's high — matching how weather sites report the daytime maximum.
+  const DAY_START_HOUR = 6
+  const observedMax = maxDefined(
+    ...observedHours
+      .filter((h) => Number(h.time.slice(11, 13)) >= DAY_START_HOUR)
+      .map((h) => h.tempC),
+  )
 
   // Forecast hours today: future hours not already covered by an observation.
   const forecastHours = fx

@@ -56,10 +56,19 @@ describe('buildStationData', () => {
     expect(r.hourly.every((h) => h.time.startsWith('2026-05-29'))).toBe(true)
   })
 
-  it('today high reflects the real observed peak when it exceeds the forecast', () => {
-    const hot = [...series, { obsTime: at(2026, 4, 28, 20, 0), tempC: 25 }] // Seoul 05:00, 25C
+  it('today high reflects a real daytime observed peak when it exceeds the forecast', () => {
+    const hot = [...series, { obsTime: at(2026, 4, 28, 21, 30), tempC: 25 }] // Seoul 06:30, 25C
     const r = buildStationData(station, hot, fx, nowEpoch)
     expect(r.todayHighC).toBe(25) // beats fx.todayHighC (18)
+  })
+
+  it('ignores an overnight/pre-dawn spike when computing the high', () => {
+    // 30C at 02:00 Seoul (before 6am) must NOT become today's high.
+    const spike = [...series, { obsTime: at(2026, 4, 28, 17, 0), tempC: 30 }] // Seoul 02:00
+    const r = buildStationData(station, spike, fx, nowEpoch)
+    expect(r.todayHighC).toBe(18) // forecast high, not the 30 overnight spike
+    // but the spike still appears in the hourly strip (it's a real observation)
+    expect(r.hourly.some((h) => h.time === '2026-05-29T02:00' && h.tempC === 30)).toBe(true)
   })
 
   it('passes through tomorrow high/low and local time', () => {
