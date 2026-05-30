@@ -5,6 +5,7 @@ import HourlyStrip from './HourlyStrip.jsx'
 
 export default function StationRow({ row, confidenceDeps }) {
   const [open, setOpen] = useState(false)
+  const [selected, setSelected] = useState(null) // selected hour's time string
   const confidence = useConfidence(
     { lat: row.lat, lon: row.lon, metnoHighC: row.forecastHighC },
     open,
@@ -41,7 +42,14 @@ export default function StationRow({ row, confidenceDeps }) {
         <span className="metric"><em>Tmrw</em> {formatBoth(row.tomorrowHighC)}</span>
         {!row.hasObs && <span className="badge">no station obs</span>}
       </button>
-      {open && <HourlyStrip row={row} confidence={confidence} />}
+      {open && (
+        <HourlyStrip
+          row={row}
+          confidence={confidence}
+          selected={selected}
+          onSelect={(t) => setSelected((cur) => (cur === t ? null : t))}
+        />
+      )}
     </div>
   )
 }

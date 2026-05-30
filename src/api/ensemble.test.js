@@ -1,36 +1,40 @@
 import { describe, it, expect } from 'vitest'
-import { parseEnsembleHighs } from './ensemble.js'
+import { parseEnsemble } from './ensemble.js'
 
-describe('parseEnsembleHighs', () => {
-  const raw = [
-    {
-      daily: {
-        temperature_2m_max_ecmwf_ifs025: [29.1],
-        temperature_2m_max_gfs_seamless: [28.7],
-        temperature_2m_max_icon_seamless: [28.4],
-        temperature_2m_max_gem_seamless: [29.0],
-        temperature_2m_max_ukmo_seamless: [null],
-        temperature_2m_max_jma_seamless: [30.1],
-      },
+describe('parseEnsemble', () => {
+  const raw = {
+    daily: {
+      temperature_2m_max_ecmwf_ifs025: [29.1],
+      temperature_2m_max_gfs_seamless: [28.7],
+      temperature_2m_max_ukmo_seamless: [null],
     },
-  ]
+    hourly: {
+      time: ['2026-05-30T16:00', '2026-05-30T17:00'],
+      temperature_2m_ecmwf_ifs025: [29.1, 28.5],
+      temperature_2m_gfs_seamless: [28.7, 28.0],
+      temperature_2m_ukmo_seamless: [27.0, 26.5],
+    },
+  }
 
-  it('maps suffixed per-model fields to named highs', () => {
-    const [loc] = parseEnsembleHighs(raw)
-    const ecmwf = loc.find((s) => s.name === 'ECMWF')
+  it('maps each model to a high and an hourly lookup', () => {
+    const models = parseEnsemble(raw)
+    const ecmwf = models.find((m) => m.name === 'ECMWF')
     expect(ecmwf.highC).toBe(29.1)
-    expect(loc.find((s) => s.name === 'JMA').highC).toBe(30.1)
+    expect(ecmwf.hourly['2026-05-30T17:00']).toBe(28.5)
   })
 
-  it('drops models that returned no numeric value', () => {
-    const [loc] = parseEnsembleHighs(raw)
-    expect(loc.find((s) => s.name === 'UKMO')).toBeUndefined()
-    expect(loc).toHaveLength(5)
+  it('keeps a model that has hourly data even if its daily high is missing', () => {
+    const ukmo = parseEnsemble(raw).find((m) => m.name === 'UKMO')
+    expect(ukmo.highC).toBeNull()
+    expect(ukmo.hourly['2026-05-30T16:00']).toBe(27.0)
   })
 
-  it('handles a single-object (non-array) response', () => {
-    const out = parseEnsembleHighs(raw[0])
-    expect(out).toHaveLength(1)
-    expect(out[0].length).toBe(5)
+  it('omits models with neither high nor hourly data', () => {
+    const models = parseEnsemble(raw)
+    expect(models.find((m) => m.name === 'JMA')).toBeUndefined()
+  })
+
+  it('accepts an array response (single location)', () => {
+    expect(parseEnsemble([raw]).length).toBeGreaterThan(0)
   })
 })

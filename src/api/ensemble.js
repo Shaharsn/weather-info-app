@@ -1,8 +1,9 @@
 import { fetchJson } from './http.js'
 
-// Independent global forecast models, fetched together from Open-Meteo to gauge
-// agreement on today's high. Used only for the confidence indicator; if this
-// request fails (e.g. rate-limited), confidence is simply not shown.
+// Independent global forecast models, fetched together from Open-Meteo for the
+// expanded city only. Gives both each model's today-high (for the consensus) and
+// its hourly values (for the per-hour "by source" breakdown). If this request
+// fails (e.g. rate-limited), confidence and the breakdown are simply not shown.
 const MODELS = [
   { id: 'ecmwf_ifs025', name: 'ECMWF' },
   { id: 'gfs_seamless', name: 'GFS' },
@@ -12,29 +13,34 @@ const MODELS = [
   { id: 'jma_seamless', name: 'JMA' },
 ]
 
-// Pure: raw multi-model response (array, one per location) -> per-location
-// [{ name, highC }] for the models that returned a numeric high.
-export function parseEnsembleHighs(raw) {
-  const arr = Array.isArray(raw) ? raw : [raw]
-  return arr.map((loc) =>
-    MODELS.map((m) => ({
-      name: m.name,
-      highC: loc?.daily?.[`temperature_2m_max_${m.id}`]?.[0] ?? null,
-    })).filter((s) => typeof s.highC === 'number'),
-  )
+// Pure: raw multi-model response -> [{ name, highC, hourly: { localTime: tempC } }]
+// for the models that returned data. Open-Meteo (timezone=auto) returns local
+// time strings, matching the merge layer's hourly keys.
+export function parseEnsemble(raw) {
+  const loc = Array.isArray(raw) ? raw[0] : raw
+  if (!loc) return []
+  const times = loc.hourly?.time ?? []
+  return MODELS.map((m) => {
+    const highC = loc.daily?.[`temperature_2m_max_${m.id}`]?.[0]
+    const temps = loc.hourly?.[`temperature_2m_${m.id}`] ?? []
+    const hourly = {}
+    times.forEach((t, i) => {
+      if (typeof temps[i] === 'number') hourly[t] = temps[i]
+    })
+    return { name: m.name, highC: typeof highC === 'number' ? highC : null, hourly }
+  }).filter((m) => m.highC != null || Object.keys(m.hourly).length > 0)
 }
 
-// On-demand: fetch today's max per model for a SINGLE location (the one the user
-// expanded). One small request — keeps Open-Meteo usage tiny vs. fetching all cities.
+// On-demand: one small request for a single location (today + tomorrow).
 export async function fetchStationEnsemble(lat, lon) {
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
     daily: 'temperature_2m_max',
-    forecast_days: '1',
+    hourly: 'temperature_2m',
+    forecast_days: '2',
     timezone: 'auto',
     models: MODELS.map((m) => m.id).join(','),
   })
-  const [loc] = parseEnsembleHighs(await fetchJson(`https://api.open-meteo.com/v1/forecast?${params}`))
-  return loc ?? []
+  return parseEnsemble(await fetchJson(`https://api.open-meteo.com/v1/forecast?${params}`))
 }

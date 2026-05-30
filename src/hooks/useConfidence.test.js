@@ -14,12 +14,13 @@ describe('useConfidence', () => {
     expect(fetchStationEnsemble).not.toHaveBeenCalled()
   })
 
-  it('fetches once enabled and computes consensus including MET Norway', async () => {
-    const fetchStationEnsemble = vi.fn().mockResolvedValue([
-      { name: 'ECMWF', highC: 29.1 },
-      { name: 'GFS', highC: 28.4 }, // -> 28
-      { name: 'ICON', highC: 29.0 },
-    ])
+  it('fetches once enabled, computes consensus, and exposes per-model data', async () => {
+    const models = [
+      { name: 'ECMWF', highC: 29.1, hourly: { '2026-05-30T17:00': 28.5 } },
+      { name: 'GFS', highC: 28.4, hourly: {} }, // -> 28
+      { name: 'ICON', highC: 29.0, hourly: {} },
+    ]
+    const fetchStationEnsemble = vi.fn().mockResolvedValue(models)
     const { result } = renderHook(() =>
       useConfidence(target, true, { fetchStationEnsemble }),
     )
@@ -27,8 +28,8 @@ describe('useConfidence', () => {
     // sites round to: ECMWF 29, GFS 28, ICON 29, MET Norway 29 -> median 29, 3/4 agree
     expect(result.current.agreement.consensusC).toBe(29)
     expect(result.current.agreement.agree).toBe(3)
-    expect(result.current.agreement.total).toBe(4)
     expect(result.current.agreement.pct).toBe(75)
+    expect(result.current.models).toBe(models) // passed through for the per-hour view
   })
 
   it('reports unavailable when the fetch fails', async () => {

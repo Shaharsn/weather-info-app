@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import HourlyStrip from './HourlyStrip.jsx'
 
 const row = {
@@ -48,10 +48,32 @@ describe('HourlyStrip', () => {
     expect(screen.getByText('TBD')).toBeInTheDocument()
     expect(container.querySelector('.hour.now')).toHaveTextContent('TBD')
   })
-  it('shows tomorrow high/low', () => {
-    render(<HourlyStrip row={row} />)
-    expect(screen.getByText(/Tomorrow/)).toBeInTheDocument()
-    expect(screen.getByText('19.00°C / 66.20°F')).toBeInTheDocument()
+  it('calls onSelect with the clicked hour', () => {
+    const onSelect = vi.fn()
+    render(<HourlyStrip row={row} onSelect={onSelect} />)
+    fireEvent.click(screen.getByText('18:00'))
+    expect(onSelect).toHaveBeenCalledWith('2026-05-29T18:00')
+  })
+
+  it('shows each source for a selected forecast hour', () => {
+    const confidence = {
+      status: 'ready',
+      models: [
+        { name: 'ECMWF', highC: 16.2, hourly: { '2026-05-29T18:00': 16.2 } },
+        { name: 'GFS', highC: 15.8, hourly: { '2026-05-29T18:00': 15.8 } },
+      ],
+      agreement: { consensusC: 16, agree: 2, total: 3, pct: 67, sites: [] },
+    }
+    render(<HourlyStrip row={row} confidence={confidence} selected="2026-05-29T18:00" />)
+    expect(screen.getByText(/18:00 forecast — by source/)).toBeInTheDocument()
+    expect(screen.getByText('ECMWF 16.20°C / 61.16°F')).toBeInTheDocument()
+    expect(screen.getByText('MET Norway 16.00°C / 60.80°F')).toBeInTheDocument() // the displayed value
+  })
+
+  it('shows the METAR value for a selected observed hour', () => {
+    render(<HourlyStrip row={row} selected="2026-05-29T06:00" />)
+    expect(screen.getByText(/Observed \(METAR\)/)).toBeInTheDocument()
+    expect(screen.getByText('METAR 12.00°C / 53.60°F')).toBeInTheDocument()
   })
   it('renders model agreement when confidence is ready', () => {
     const confidence = {
