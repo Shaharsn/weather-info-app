@@ -13,23 +13,26 @@ export function useWeather(stations, deps = {}) {
   const [rows, setRows] = useState([])
   const [status, setStatus] = useState('loading') // loading | ready | error
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [forecastError, setForecastError] = useState(false)
   const timer = useRef(null)
 
   const load = useCallback(async () => {
     setStatus((s) => (s === 'ready' ? 'ready' : 'loading'))
     try {
       const icaos = stations.map((s) => s.icao).filter(Boolean)
-      // Forecast is the hard dependency. METAR is a soft enhancement: if it fails,
-      // every row still renders via the Open-Meteo current-temp fallback.
+      // Both sources are soft: METAR failure still leaves forecast-sourced rows,
+      // and forecast failure (e.g. rate-limited) still leaves METAR current temps
+      // and local times. Each merged row degrades on its own.
       const [metarMap, fxArr] = await Promise.all([
         fetchMetar(icaos).catch(() => ({})),
-        fetchForecast(stations),
+        fetchForecast(stations).catch(() => null),
       ])
       const now = nowEpoch()
       const built = stations.map((s, i) =>
-        buildStationData(s, s.icao ? metarMap[s.icao] : undefined, fxArr[i] ?? null, now),
+        buildStationData(s, s.icao ? metarMap[s.icao] : undefined, fxArr ? fxArr[i] ?? null : null, now),
       )
       setRows(built)
+      setForecastError(!fxArr)
       setLastUpdated(new Date())
       setStatus('ready')
     } catch (e) {
@@ -43,5 +46,5 @@ export function useWeather(stations, deps = {}) {
     return () => clearInterval(timer.current)
   }, [load])
 
-  return { rows, status, lastUpdated, refresh: load }
+  return { rows, status, lastUpdated, forecastError, refresh: load }
 }

@@ -40,6 +40,14 @@ All 45 stations have public NOAA METAR. If a station's METAR is momentarily miss
 temperature, that row falls back to Open-Meteo's current reading and is tagged
 **"no station obs"** so a model value is never shown as if it were measured.
 
+### When the forecast is unavailable
+
+Open-Meteo rate-limits by number of locations, so the forecast can occasionally be
+throttled. When that happens the app stays usable: every city still shows its **current
+temperature** (METAR) and **local time** (computed from a stored IANA timezone, independent
+of the forecast). The forecast columns show `—` and a notice explains the forecast is
+temporarily unavailable. Each place also shows its **local time**, refreshed on every load.
+
 "Today's High" is taken from the forecast's daily max, but never reads below the live
 observed "Now" — if a real observation already exceeds the model's daily max, the observed
 value is shown as the high.

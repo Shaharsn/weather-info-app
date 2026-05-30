@@ -10,26 +10,44 @@ function localDateStr(epochSec, utcOffsetSeconds) {
   return new Date((epochSec + utcOffsetSeconds) * 1000).toISOString().slice(0, 10)
 }
 
-// Wall-clock "HH:MM" at the station's local time for the given UTC epoch.
-function localTimeStr(epochSec, utcOffsetSeconds) {
-  return new Date((epochSec + utcOffsetSeconds) * 1000).toISOString().slice(11, 16)
+// Wall-clock "HH:MM" at a station's local time, from its IANA timezone. Computed
+// independently of the forecast so local time still works when the forecast is down.
+function localTimeInZone(epochSec, tz) {
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(epochSec * 1000))
+  } catch {
+    return null
+  }
 }
 
 export function buildStationData(station, metar, fx, nowEpoch) {
+  const localTime = station.tz ? localTimeInZone(nowEpoch, station.tz) : null
+
+  // "Now" prefers the real METAR observation, then the forecast's current value.
+  const hasObs = !!metar && typeof metar.tempC === 'number'
+  let now
+  if (hasObs) {
+    now = { tempC: metar.tempC, source: 'metar', obsTime: metar.obsTime }
+  } else if (fx && typeof fx.currentC === 'number') {
+    now = { tempC: fx.currentC, source: 'forecast', obsTime: null }
+  } else {
+    now = { tempC: null, source: null, obsTime: null }
+  }
+
+  // Forecast missing (e.g. rate-limited): keep "Now" + local time, blank the rest.
   if (!fx) {
     return {
       city: station.city, stationLabel: station.stationLabel, icao: station.icao,
-      now: { tempC: null, source: null, obsTime: null },
-      localTime: null,
+      now, localTime,
       todayHighC: null, tomorrowHighC: null, tomorrowLowC: null,
-      hourly: [], hasObs: false, error: 'No forecast data',
+      hourly: [], hasObs, forecastMissing: true, error: null,
     }
   }
-
-  const hasObs = !!metar && typeof metar.tempC === 'number'
-  const now = hasObs
-    ? { tempC: metar.tempC, source: 'metar', obsTime: metar.obsTime }
-    : { tempC: fx.currentC, source: 'forecast', obsTime: null }
 
   // Today's high must never read lower than the temperature we're actually
   // measuring now: the forecast model's daily max can lag a live observation.
@@ -49,11 +67,10 @@ export function buildStationData(station, metar, fx, nowEpoch) {
 
   return {
     city: station.city, stationLabel: station.stationLabel, icao: station.icao,
-    now,
-    localTime: localTimeStr(nowEpoch, fx.utcOffsetSeconds),
+    now, localTime,
     todayHighC,
     tomorrowHighC: fx.tomorrowHighC,
     tomorrowLowC: fx.tomorrowLowC,
-    hourly, hasObs, error: null,
+    hourly, hasObs, forecastMissing: false, error: null,
   }
 }

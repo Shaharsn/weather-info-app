@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { buildStationData } from './merge.js'
 
-const station = { city: 'Seoul', stationLabel: 'Incheon', icao: 'RKSI', lat: 37.5, lon: 126.5 }
+const station = { city: 'Seoul', stationLabel: 'Incheon', icao: 'RKSI', lat: 37.5, lon: 126.5, tz: 'Asia/Seoul' }
 const fx = {
   utcOffsetSeconds: 32400,
   currentC: 13.1,
@@ -58,8 +58,20 @@ describe('buildStationData', () => {
     const r = buildStationData(station, undefined, fx, nowEpoch)
     expect(r.localTime).toBe('07:00')
   })
-  it('marks error when forecast missing', () => {
+  it('still shows METAR Now + local time when the forecast is missing', () => {
+    const r = buildStationData(station, { tempC: 21, obsTime: 100 }, null, nowEpoch)
+    expect(r.now.tempC).toBe(21)
+    expect(r.now.source).toBe('metar')
+    expect(r.localTime).toBe('07:00')
+    expect(r.forecastMissing).toBe(true)
+    expect(r.todayHighC).toBeNull()
+    expect(r.hourly).toEqual([])
+    expect(r.error).toBeNull()
+  })
+  it('shows local time even when both METAR and forecast are missing', () => {
     const r = buildStationData(station, undefined, null, nowEpoch)
-    expect(r.error).toBeTruthy()
+    expect(r.now.tempC).toBeNull()
+    expect(r.localTime).toBe('07:00')
+    expect(r.forecastMissing).toBe(true)
   })
 })

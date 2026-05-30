@@ -3,7 +3,7 @@ import { useWeather } from './hooks/useWeather.js'
 import StationRow from './components/StationRow.jsx'
 
 export default function App() {
-  const { rows, status, lastUpdated, refresh } = useWeather(STATIONS)
+  const { rows, status, lastUpdated, forecastError, refresh } = useWeather(STATIONS)
 
   return (
     <div className="app">
@@ -21,10 +21,10 @@ export default function App() {
       {status === 'error' && rows.length === 0 && (
         <p className="notice error">Failed to load weather data. Try Refresh.</p>
       )}
-      {status === 'error' && rows.length > 0 && (
+      {status === 'ready' && forecastError && (
         <p className="notice warn">
-          Couldn’t refresh just now (the weather service may be rate-limited) — showing the last
-          loaded data. Try Refresh again in a minute.
+          Forecast unavailable right now (the forecast service may be rate-limited) — showing
+          current temperatures and local times only. Try Refresh again in a minute.
         </p>
       )}
 
