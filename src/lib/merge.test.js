@@ -3,7 +3,7 @@ import { buildStationData } from './merge.js'
 
 const station = { city: 'Seoul', stationLabel: 'Incheon', icao: 'RKSI', lat: 37.5, lon: 126.5, tz: 'Asia/Seoul' }
 const fx = {
-  utcOffsetSeconds: 32400,
+  utcOffsetSeconds: 32400, // +9h
   currentC: 13.1,
   todayHighC: 18,
   tomorrowHighC: 19,
@@ -11,67 +11,71 @@ const fx = {
   hourly: [
     { time: '2026-05-29T00:00', tempC: 10 },
     { time: '2026-05-29T06:00', tempC: 12 },
-    { time: '2026-05-29T18:00', tempC: 16 },
+    { time: '2026-05-29T18:00', tempC: 16 }, // future (Seoul 18:00 > now 07:00)
     { time: '2026-05-30T00:00', tempC: 9 }, // tomorrow, excluded from today strip
   ],
 }
-// "now" = 2026-05-29T07:00 local (Seoul, +9h) => 2026-05-28T22:00 UTC
+// now = 2026-05-28T22:00 UTC = 2026-05-29T07:00 Seoul (+9h)
 const nowEpoch = Math.floor(Date.UTC(2026, 4, 28, 22, 0) / 1000)
+const at = (...utc) => Math.floor(Date.UTC(...utc) / 1000)
+// METAR observations earlier today (Seoul local 00:00, 06:00, 07:00=current)
+const series = [
+  { obsTime: at(2026, 4, 28, 15, 0), tempC: 8 }, // Seoul 00:00
+  { obsTime: at(2026, 4, 28, 21, 0), tempC: 11 }, // Seoul 06:00
+  { obsTime: at(2026, 4, 28, 22, 0), tempC: 12.4 }, // Seoul 07:00 (latest)
+]
 
 describe('buildStationData', () => {
-  it('uses METAR for Now when present and tags source metar', () => {
-    const r = buildStationData(station, { tempC: 12.4, obsTime: 100 }, fx, nowEpoch)
+  it('takes Now from the latest METAR observation', () => {
+    const r = buildStationData(station, series, fx, nowEpoch)
     expect(r.now.tempC).toBe(12.4)
     expect(r.now.source).toBe('metar')
+    expect(r.now.obsTime).toBe(at(2026, 4, 28, 22, 0))
     expect(r.hasObs).toBe(true)
   })
-  it('falls back to forecast current when METAR absent and tags source forecast', () => {
-    const r = buildStationData(station, undefined, fx, nowEpoch)
+
+  it('falls back to forecast current when there is no observation', () => {
+    const r = buildStationData(station, [], fx, nowEpoch)
     expect(r.now.tempC).toBe(13.1)
     expect(r.now.source).toBe('forecast')
     expect(r.hasObs).toBe(false)
   })
-  it('keeps only today hours and marks observed vs forecast', () => {
-    const r = buildStationData(station, undefined, fx, nowEpoch)
+
+  it("blends today's observed past hours with forecast future hours", () => {
+    const r = buildStationData(station, series, fx, nowEpoch)
     expect(r.hourly.map((h) => h.time)).toEqual([
-      '2026-05-29T00:00', '2026-05-29T06:00', '2026-05-29T18:00',
+      '2026-05-29T00:00', '2026-05-29T06:00', '2026-05-29T07:00', '2026-05-29T18:00',
     ])
-    expect(r.hourly.map((h) => h.observed)).toEqual([true, true, false])
+    expect(r.hourly.map((h) => h.observed)).toEqual([true, true, true, false])
+    expect(r.hourly.map((h) => h.tempC)).toEqual([8, 11, 12.4, 16])
   })
-  it('passes through highs/lows', () => {
-    const r = buildStationData(station, undefined, fx, nowEpoch)
-    expect(r.todayHighC).toBe(18)
+
+  it('excludes observations from other local days', () => {
+    const withYesterday = [{ obsTime: at(2026, 4, 27, 21, 0), tempC: 5 }, ...series]
+    const r = buildStationData(station, withYesterday, fx, nowEpoch)
+    expect(r.hourly.every((h) => h.time.startsWith('2026-05-29'))).toBe(true)
+  })
+
+  it('today high reflects the real observed peak when it exceeds the forecast', () => {
+    const hot = [...series, { obsTime: at(2026, 4, 28, 20, 0), tempC: 25 }] // Seoul 05:00, 25C
+    const r = buildStationData(station, hot, fx, nowEpoch)
+    expect(r.todayHighC).toBe(25) // beats fx.todayHighC (18)
+  })
+
+  it('passes through tomorrow high/low and local time', () => {
+    const r = buildStationData(station, series, fx, nowEpoch)
     expect(r.tomorrowHighC).toBe(19)
     expect(r.tomorrowLowC).toBe(7.5)
-  })
-  it('raises today high to the observed Now when the forecast max lags it', () => {
-    // METAR reads 24 but forecast daily max is only 18 -> high should be 24, not 18.
-    const r = buildStationData(station, { tempC: 24, obsTime: 100 }, fx, nowEpoch)
-    expect(r.todayHighC).toBe(24)
-  })
-  it('keeps the forecast high when it already exceeds Now', () => {
-    const r = buildStationData(station, { tempC: 12, obsTime: 100 }, fx, nowEpoch)
-    expect(r.todayHighC).toBe(18)
-  })
-  it("computes the station's local time at refresh", () => {
-    // now = 2026-05-29T07:00 Seoul local (+9h) -> "07:00"
-    const r = buildStationData(station, undefined, fx, nowEpoch)
     expect(r.localTime).toBe('07:00')
   })
-  it('still shows METAR Now + local time when the forecast is missing', () => {
-    const r = buildStationData(station, { tempC: 21, obsTime: 100 }, null, nowEpoch)
-    expect(r.now.tempC).toBe(21)
+
+  it('still shows observed hours + local time when the forecast is missing', () => {
+    const r = buildStationData(station, series, null, nowEpoch)
+    expect(r.forecastMissing).toBe(true)
     expect(r.now.source).toBe('metar')
     expect(r.localTime).toBe('07:00')
-    expect(r.forecastMissing).toBe(true)
-    expect(r.todayHighC).toBeNull()
-    expect(r.hourly).toEqual([])
+    expect(r.hourly.map((h) => h.observed)).toEqual([true, true, true]) // observed only
+    expect(r.tomorrowHighC).toBeNull()
     expect(r.error).toBeNull()
-  })
-  it('shows local time even when both METAR and forecast are missing', () => {
-    const r = buildStationData(station, undefined, null, nowEpoch)
-    expect(r.now.tempC).toBeNull()
-    expect(r.localTime).toBe('07:00')
-    expect(r.forecastMissing).toBe(true)
   })
 })

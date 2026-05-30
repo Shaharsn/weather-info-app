@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchMetar as defaultFetchMetar } from '../api/metar.js'
+import { fetchMetarSeries as defaultFetchMetar } from '../api/metar.js'
 import { fetchForecast as defaultFetchForecast } from '../api/forecast.js'
 import { buildStationData } from '../lib/merge.js'
 import {
@@ -40,8 +40,10 @@ export function useWeather(stations, deps = {}) {
       // Both sources are soft. METAR failure still leaves forecast-sourced rows.
       // Forecast failure falls back to the last cached forecast (if recent); only
       // when there's no live and no cached forecast do rows blank their forecast.
+      // METAR series = the last ~30h of observations per station: enough to cover
+      // every hour already elapsed today in any timezone.
       const [metarMap, liveForecast] = await Promise.all([
-        fetchMetar(icaos).catch(() => ({})),
+        fetchMetar(icaos, 30).catch(() => ({})),
         fetchForecast(stations).catch(() => null),
       ])
 

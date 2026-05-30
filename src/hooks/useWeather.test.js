@@ -11,11 +11,13 @@ const fxLoc = {
   hourly: [{ time: '2026-05-29T00:00', tempC: 18 }],
 }
 
+const obsEpoch = Math.floor(Date.UTC(2026, 4, 29, 12, 0) / 1000)
 function makeDeps() {
   return {
-    fetchMetar: vi.fn().mockResolvedValue({ RKSI: { tempC: 19.5, obsTime: 1 } }),
+    // METAR series: a map of icao -> [{ obsTime, tempC }] (latest last).
+    fetchMetar: vi.fn().mockResolvedValue({ RKSI: [{ obsTime: obsEpoch, tempC: 19.5 }] }),
     fetchForecast: vi.fn().mockResolvedValue([fxLoc, fxLoc]),
-    nowEpoch: () => Math.floor(Date.UTC(2026, 4, 29, 12, 0) / 1000),
+    nowEpoch: () => obsEpoch,
     nowMs: () => 0,
     // Cache injected per-test so cases stay isolated from real localStorage.
     readForecastCache: () => null,
@@ -29,7 +31,7 @@ describe('useWeather', () => {
     // defaults — if those defaults aren't stable, `load` changes every render
     // and the effect refetches forever. Only the fetchers are injected (as spies).
     const deps = {
-      fetchMetar: vi.fn().mockResolvedValue({ RKSI: { tempC: 19.5, obsTime: 1 } }),
+      fetchMetar: vi.fn().mockResolvedValue({ RKSI: [{ obsTime: obsEpoch, tempC: 19.5 }] }),
       fetchForecast: vi.fn().mockResolvedValue([fxLoc, fxLoc]),
     }
     const { result, rerender } = renderHook(() => useWeather(stations, deps))
@@ -45,7 +47,7 @@ describe('useWeather', () => {
     const deps = makeDeps()
     const { result } = renderHook(() => useWeather(stations, deps))
     await waitFor(() => expect(result.current.status).toBe('ready'))
-    expect(deps.fetchMetar).toHaveBeenCalledWith(['RKSI'])
+    expect(deps.fetchMetar).toHaveBeenCalledWith(['RKSI'], 30)
     expect(result.current.rows).toHaveLength(2)
     expect(result.current.rows[0].now.source).toBe('metar')
     expect(result.current.rows[1].now.source).toBe('forecast') // no ICAO -> fallback

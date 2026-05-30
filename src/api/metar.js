@@ -24,3 +24,33 @@ export async function fetchMetar(icaos) {
   const url = `${METAR_URL}?ids=${icaos.join(',')}&format=json`
   return parseMetar(await fetchJson(url))
 }
+
+// Pure: raw METAR objects (multiple per station) -> { [icao]: [{obsTime, tempC}] }
+// sorted ascending by obsTime, so the last element is the most recent observation.
+export function parseMetarSeries(rawArray) {
+  const map = {}
+  for (const m of rawArray) {
+    if (typeof m.temp !== 'number' || !m.icaoId || typeof m.obsTime !== 'number') continue
+    ;(map[m.icaoId] ??= []).push({ obsTime: m.obsTime, tempC: m.temp })
+  }
+  for (const k in map) map[k].sort((a, b) => a.obsTime - b.obsTime)
+  return map
+}
+
+// Fetch the last `hours` of observations for each station. The aviationweather
+// endpoint caps a batched response at ~400 records total, which would truncate
+// history when many stations are requested at once — so fetch in small chunks
+// (each well under the cap) and merge.
+export async function fetchMetarSeries(icaos, hours = 30) {
+  if (icaos.length === 0) return {}
+  const CHUNK = 6
+  const chunks = []
+  for (let i = 0; i < icaos.length; i += CHUNK) chunks.push(icaos.slice(i, i + CHUNK))
+  const maps = await Promise.all(
+    chunks.map(async (group) => {
+      const url = `${METAR_URL}?ids=${group.join(',')}&format=json&hours=${hours}`
+      return parseMetarSeries(await fetchJson(url))
+    }),
+  )
+  return Object.assign({}, ...maps)
+}

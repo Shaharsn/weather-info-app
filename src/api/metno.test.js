@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { parseMetnoTimeseries, tzOffsetSeconds } from './metno.js'
+import { parseMetnoTimeseries } from './metno.js'
+import { tzOffsetSeconds } from '../lib/tz.js'
 
 // Minimal met.no "compact" timeseries (UTC times, instant air_temperature).
 const timeseries = [

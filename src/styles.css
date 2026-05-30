@@ -1,7 +1,7 @@
 :root { color-scheme: light dark; }
 * { box-sizing: border-box; }
 body { font-family: system-ui, sans-serif; margin: 0; background: #0f1115; color: #e8eaed; }
-.app { max-width: 880px; margin: 0 auto; padding: 16px; }
+.app { max-width: 80%; margin: 0 auto; padding: 16px; }
 .app-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .app-header h1 { font-size: 20px; }
 .controls { display: flex; align-items: center; gap: 12px; }

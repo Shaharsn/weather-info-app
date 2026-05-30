@@ -1,4 +1,4 @@
-import { fetchJson } from './http.js'
+import { tzOffsetSeconds } from '../lib/tz.js'
 
 // MET Norway (Yr) Locationforecast 2.0 — free, no key, global, ECMWF-backed.
 // Browser can't set a User-Agent (and met.no sends no CORS headers), so in the
@@ -7,19 +7,6 @@ import { fetchJson } from './http.js'
 const IN_BROWSER = typeof window !== 'undefined'
 const METNO_BASE = IN_BROWSER ? '/metno-api' : 'https://api.met.no'
 const USER_AGENT = 'weather-info-app/1.0 (personal, non-commercial)'
-
-// Seconds east of UTC for an IANA timezone at a given instant (handles DST).
-export function tzOffsetSeconds(tz, date) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz, hour12: false,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-  }).formatToParts(date).reduce((a, p) => ((a[p.type] = p.value), a), {})
-  const asUTC = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second)
-  // Real timezone offsets are whole minutes; round to a minute so a sub-second
-  // `now` can't yield e.g. 32399s (which renders hour labels as ":59").
-  return Math.round((asUTC - date.getTime()) / 60000) * 60
-}
 
 // Pure: met.no timeseries -> the same shape Open-Meteo's parseForecast returns,
 // so the merge layer is identical regardless of provider.
