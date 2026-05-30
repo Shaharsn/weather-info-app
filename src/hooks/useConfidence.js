@@ -3,8 +3,8 @@ import { fetchStationEnsemble as defaultFetch } from '../api/ensemble.js'
 import { computeAgreement } from '../lib/agreement.js'
 
 // Lazily fetch the multi-model ensemble for ONE station (only once it's enabled,
-// i.e. the row is expanded) and compute agreement on its displayed high.
-// target: { lat, lon, highC (displayed high), metnoHighC (MET Norway's own high) }
+// i.e. the row is expanded) and compute the consensus high + agreement.
+// target: { lat, lon, metnoHighC (MET Norway's own high, counted as a site) }
 export function useConfidence(target, enabled, deps = {}) {
   const fetchEnsemble = deps.fetchStationEnsemble ?? defaultFetch
   const [state, setState] = useState({ status: 'idle', agreement: null })
@@ -19,7 +19,7 @@ export function useConfidence(target, enabled, deps = {}) {
     fetchEnsemble(target.lat, target.lon)
       .then((models) => {
         const sites = [...models, { name: 'MET Norway', highC: target.metnoHighC }]
-        const agreement = computeAgreement(sites, target.highC)
+        const agreement = computeAgreement(sites)
         if (!cancelled) setState({ status: agreement ? 'ready' : 'unavailable', agreement })
       })
       .catch(() => {

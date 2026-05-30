@@ -22,9 +22,9 @@ function Agreement({ confidence }) {
   return (
     <div className="agreement">
       <div className="agreement-head">
-        Model agreement on today’s high ({a.targetC}°C):{' '}
+        Model consensus high {a.consensusC}°C —{' '}
         <strong className={`pct ${confidenceClass(a.pct)}`}>
-          {a.agree}/{a.total} ({a.pct}%)
+          {a.agree}/{a.total} agree ({a.pct}%)
         </strong>
       </div>
       <div className="agreement-sites">

@@ -101,6 +101,7 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
     lat: station.lat, lon: station.lon,
     now, localTime,
     todayHighC,
+    observedFloorC: maxDefined(now.tempC, observedMax), // high must never drop below this
     forecastHighC: fx ? fx.todayHighC : null, // MET Norway's own high (a confidence vote)
     tomorrowHighC: fx ? fx.tomorrowHighC : null,
     tomorrowLowC: fx ? fx.tomorrowLowC : null,

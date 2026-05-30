@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { useConfidence } from './useConfidence.js'
 
-const target = { lat: 51.5, lon: 0.05, highC: 29, metnoHighC: 29.2 }
+const target = { lat: 51.5, lon: 0.05, metnoHighC: 29.2 }
 
 describe('useConfidence', () => {
   it('does nothing until enabled', () => {
@@ -14,7 +14,7 @@ describe('useConfidence', () => {
     expect(fetchStationEnsemble).not.toHaveBeenCalled()
   })
 
-  it('fetches once enabled and computes agreement including MET Norway', async () => {
+  it('fetches once enabled and computes consensus including MET Norway', async () => {
     const fetchStationEnsemble = vi.fn().mockResolvedValue([
       { name: 'ECMWF', highC: 29.1 },
       { name: 'GFS', highC: 28.4 }, // -> 28
@@ -24,7 +24,8 @@ describe('useConfidence', () => {
       useConfidence(target, true, { fetchStationEnsemble }),
     )
     await waitFor(() => expect(result.current.status).toBe('ready'))
-    // sites: ECMWF 29, GFS 28, ICON 29, MET Norway 29 -> 3/4 agree with 29
+    // sites round to: ECMWF 29, GFS 28, ICON 29, MET Norway 29 -> median 29, 3/4 agree
+    expect(result.current.agreement.consensusC).toBe(29)
     expect(result.current.agreement.agree).toBe(3)
     expect(result.current.agreement.total).toBe(4)
     expect(result.current.agreement.pct).toBe(75)

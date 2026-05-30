@@ -6,10 +6,16 @@ import HourlyStrip from './HourlyStrip.jsx'
 export default function StationRow({ row, confidenceDeps }) {
   const [open, setOpen] = useState(false)
   const confidence = useConfidence(
-    { lat: row.lat, lon: row.lon, highC: row.todayHighC, metnoHighC: row.forecastHighC },
+    { lat: row.lat, lon: row.lon, metnoHighC: row.forecastHighC },
     open,
     confidenceDeps,
   )
+
+  // Once the multi-model ensemble loads, refine the high to the consensus median
+  // (never below what's already been observed). Otherwise show MET Norway's high.
+  const consensus = confidence.status === 'ready' ? confidence.agreement.consensusC : null
+  const displayedHigh =
+    consensus != null ? Math.max(consensus, row.observedFloorC ?? consensus) : row.todayHighC
 
   if (row.error) {
     return (
@@ -31,7 +37,7 @@ export default function StationRow({ row, confidenceDeps }) {
         <span className="station-label">{row.stationLabel}</span>
         <span className="metric"><em>Local</em> {row.localTime}</span>
         <span className="metric"><em>Now</em> {formatBoth(row.now.tempC)}</span>
-        <span className="metric"><em>High</em> {formatBoth(row.todayHighC)}</span>
+        <span className="metric"><em>High</em> {formatBoth(displayedHigh)}</span>
         <span className="metric"><em>Tmrw</em> {formatBoth(row.tomorrowHighC)}</span>
         {!row.hasObs && <span className="badge">no station obs</span>}
       </button>

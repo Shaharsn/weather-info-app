@@ -1,21 +1,24 @@
-// Model-agreement confidence for today's high.
+// Model-agreement consensus for today's high.
 // sites: [{ name, highC }] — each independent forecast's predicted high.
-// targetC: the high actually displayed (we report how many sites agree with it).
-// Returns null when there aren't enough sites to be meaningful.
-export function computeAgreement(sites, targetC) {
+// Returns the rounded median ("consensus") and how many sites round to it,
+// or null when there aren't enough sites to be meaningful.
+export function computeAgreement(sites) {
   const valid = (sites || []).filter((s) => typeof s.highC === 'number')
-  if (valid.length < 2 || typeof targetC !== 'number') return null
-  const target = Math.round(targetC)
-  const scored = valid.map((s) => {
-    const rounded = Math.round(s.highC)
-    return { name: s.name, highC: s.highC, rounded, agrees: rounded === target }
-  })
-  const agree = scored.filter((s) => s.agrees).length
+  if (valid.length < 2) return null
+
+  const scored = valid.map((s) => ({ name: s.name, highC: s.highC, rounded: Math.round(s.highC) }))
+  const sorted = scored.map((s) => s.rounded).sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  const consensus =
+    sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+
+  const withAgree = scored.map((s) => ({ ...s, agrees: s.rounded === consensus }))
+  const agree = withAgree.filter((s) => s.agrees).length
   return {
-    targetC: target,
+    consensusC: consensus,
     agree,
-    total: scored.length,
-    pct: Math.round((agree / scored.length) * 100),
-    sites: scored,
+    total: withAgree.length,
+    pct: Math.round((agree / withAgree.length) * 100),
+    sites: withAgree,
   }
 }
