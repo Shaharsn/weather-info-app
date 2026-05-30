@@ -85,19 +85,20 @@ describe('buildStationData', () => {
     expect(r.hourly.filter((h) => h.isNow)).toHaveLength(0)
   })
 
-  it('flags the peak-heat window (~2–5pm local), exclusive of 5pm', () => {
-    const tz = 'Asia/Seoul' // +9h
-    const peak = buildStationData(station, [], fx, Math.floor(Date.UTC(2026, 4, 29, 6, 0) / 1000)) // 15:00 Seoul
-    expect(peak.localTime).toBe('15:00')
-    expect(peak.isPeakHour).toBe(true)
+  it('flags the peak-heat window (~2–6pm local), exclusive of 7pm', () => {
+    const at15 = buildStationData(station, [], fx, Math.floor(Date.UTC(2026, 4, 29, 6, 0) / 1000)) // 15:00 Seoul
+    expect(at15.localTime).toBe('15:00')
+    expect(at15.isPeakHour).toBe(true)
 
     const morning = buildStationData(station, [], fx, Math.floor(Date.UTC(2026, 4, 29, 0, 0) / 1000)) // 09:00 Seoul
     expect(morning.isPeakHour).toBe(false)
 
-    const fivePM = buildStationData(station, [], fx, Math.floor(Date.UTC(2026, 4, 29, 8, 0) / 1000)) // 17:00 Seoul
-    expect(fivePM.localTime).toBe('17:00')
-    expect(fivePM.isPeakHour).toBe(false) // 5pm is the exclusive end
-    void tz
+    const at18 = buildStationData(station, [], fx, Math.floor(Date.UTC(2026, 4, 29, 9, 0) / 1000)) // 18:00 Seoul (6pm)
+    expect(at18.localTime).toBe('18:00')
+    expect(at18.isPeakHour).toBe(true) // 6pm still counts
+
+    const at19 = buildStationData(station, [], fx, Math.floor(Date.UTC(2026, 4, 29, 10, 0) / 1000)) // 19:00 Seoul
+    expect(at19.isPeakHour).toBe(false)
   })
 
   it('still shows observed hours + local time when the forecast is missing', () => {

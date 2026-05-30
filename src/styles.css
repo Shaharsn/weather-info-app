@@ -81,7 +81,10 @@ body {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
 }
 
-.peak { margin-left: 5px; cursor: help; }
+.station-line { display: flex; align-items: flex-start; gap: 6px; }
+.station-line > .station-row { flex: 1; min-width: 0; }
+.peak-marker { flex: 0 0 22px; display: flex; justify-content: center; padding-top: 11px; }
+.peak { cursor: help; font-size: 15px; line-height: 1; }
 
 .badge {
   font-size: 11px; padding: 2px 7px; border-radius: 6px;

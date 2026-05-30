@@ -34,10 +34,10 @@ const maxDefined = (...vals) => {
   return v.length ? Math.max(...v) : null
 }
 
-// Daily highs typically occur ~2–5pm local. Flag a station whose local time is
+// Daily highs typically occur ~2–6pm local. Flag a station whose local time is
 // currently in that window (its "now"/high reading is near the day's peak).
 const PEAK_START_HOUR = 14
-const PEAK_END_HOUR = 17 // exclusive
+const PEAK_END_HOUR = 19 // exclusive — includes the 6pm (18:xx) hour
 function isPeakHeatHour(localTime) {
   if (!localTime) return false
   const h = Number(localTime.slice(0, 2))
