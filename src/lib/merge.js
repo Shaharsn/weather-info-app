@@ -98,8 +98,10 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
 
   return {
     city: station.city, stationLabel: station.stationLabel, icao: station.icao,
+    lat: station.lat, lon: station.lon,
     now, localTime,
     todayHighC,
+    forecastHighC: fx ? fx.todayHighC : null, // MET Norway's own high (a confidence vote)
     tomorrowHighC: fx ? fx.tomorrowHighC : null,
     tomorrowLowC: fx ? fx.tomorrowLowC : null,
     hourly, hasObs, forecastMissing: !fx, error: null,

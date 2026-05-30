@@ -1,9 +1,15 @@
 import { useState } from 'react'
 import { formatBoth } from '../lib/units.js'
+import { useConfidence } from '../hooks/useConfidence.js'
 import HourlyStrip from './HourlyStrip.jsx'
 
-export default function StationRow({ row }) {
+export default function StationRow({ row, confidenceDeps }) {
   const [open, setOpen] = useState(false)
+  const confidence = useConfidence(
+    { lat: row.lat, lon: row.lon, highC: row.todayHighC, metnoHighC: row.forecastHighC },
+    open,
+    confidenceDeps,
+  )
 
   if (row.error) {
     return (
@@ -29,7 +35,7 @@ export default function StationRow({ row }) {
         <span className="metric"><em>Tmrw</em> {formatBoth(row.tomorrowHighC)}</span>
         {!row.hasObs && <span className="badge">no station obs</span>}
       </button>
-      {open && <HourlyStrip row={row} />}
+      {open && <HourlyStrip row={row} confidence={confidence} />}
     </div>
   )
 }

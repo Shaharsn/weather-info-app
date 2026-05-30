@@ -53,6 +53,35 @@ describe('HourlyStrip', () => {
     expect(screen.getByText(/Tomorrow/)).toBeInTheDocument()
     expect(screen.getByText('19°C / 66°F')).toBeInTheDocument()
   })
+  it('renders model agreement when confidence is ready', () => {
+    const confidence = {
+      status: 'ready',
+      agreement: {
+        targetC: 29, agree: 3, total: 4, pct: 75,
+        sites: [
+          { name: 'ECMWF', highC: 29.1, rounded: 29, agrees: true },
+          { name: 'ICON', highC: 28.4, rounded: 28, agrees: false },
+          { name: 'MET Norway', highC: 29.2, rounded: 29, agrees: true },
+          { name: 'GFS', highC: 29.0, rounded: 29, agrees: true },
+        ],
+      },
+    }
+    render(<HourlyStrip row={row} confidence={confidence} />)
+    expect(screen.getByText(/Model agreement on today’s high/)).toBeInTheDocument()
+    expect(screen.getByText('3/4 (75%)')).toBeInTheDocument()
+    expect(screen.getByText('ICON 28°')).toBeInTheDocument()
+  })
+
+  it('shows an unavailable note when confidence could not be computed', () => {
+    render(<HourlyStrip row={row} confidence={{ status: 'unavailable', agreement: null }} />)
+    expect(screen.getByText(/agreement unavailable/i)).toBeInTheDocument()
+  })
+
+  it('renders nothing extra when confidence is absent', () => {
+    render(<HourlyStrip row={row} />)
+    expect(screen.queryByText(/Model agreement/)).not.toBeInTheDocument()
+  })
+
   it('shows the METAR observation time when source is metar', () => {
     render(<HourlyStrip row={{ ...row, now: { source: 'metar', obsTime: 1748520000 } }} />)
     expect(screen.getByText(/Observed at \d\d:\d\dZ/)).toBeInTheDocument()
