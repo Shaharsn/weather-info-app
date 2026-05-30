@@ -81,6 +81,8 @@ body {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
 }
 
+.peak { margin-left: 5px; cursor: help; }
+
 .badge {
   font-size: 11px; padding: 2px 7px; border-radius: 6px;
   background: rgba(255, 212, 121, 0.14); color: var(--warm-badge);

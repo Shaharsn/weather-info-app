@@ -85,6 +85,21 @@ describe('buildStationData', () => {
     expect(r.hourly.filter((h) => h.isNow)).toHaveLength(0)
   })
 
+  it('flags the peak-heat window (~2–5pm local), exclusive of 5pm', () => {
+    const tz = 'Asia/Seoul' // +9h
+    const peak = buildStationData(station, [], fx, Math.floor(Date.UTC(2026, 4, 29, 6, 0) / 1000)) // 15:00 Seoul
+    expect(peak.localTime).toBe('15:00')
+    expect(peak.isPeakHour).toBe(true)
+
+    const morning = buildStationData(station, [], fx, Math.floor(Date.UTC(2026, 4, 29, 0, 0) / 1000)) // 09:00 Seoul
+    expect(morning.isPeakHour).toBe(false)
+
+    const fivePM = buildStationData(station, [], fx, Math.floor(Date.UTC(2026, 4, 29, 8, 0) / 1000)) // 17:00 Seoul
+    expect(fivePM.localTime).toBe('17:00')
+    expect(fivePM.isPeakHour).toBe(false) // 5pm is the exclusive end
+    void tz
+  })
+
   it('still shows observed hours + local time when the forecast is missing', () => {
     const r = buildStationData(station, series, null, nowEpoch)
     expect(r.forecastMissing).toBe(true)

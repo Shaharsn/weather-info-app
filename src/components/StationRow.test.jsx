@@ -19,6 +19,12 @@ describe('StationRow', () => {
     expect(screen.getByText('12.40°C / 54.32°F')).toBeInTheDocument() // now
     expect(screen.getByText('18.00°C / 64.40°F')).toBeInTheDocument() // today high
   })
+  it('shows a peak-hours clock only when isPeakHour is set', () => {
+    const { rerender, container } = render(<StationRow row={base} />)
+    expect(container.querySelector('.peak')).toBeNull()
+    rerender(<StationRow row={{ ...base, isPeakHour: true }} />)
+    expect(container.querySelector('.peak')).toBeInTheDocument()
+  })
   it('hides hourly detail until expanded, shows after click', () => {
     render(<StationRow row={base} />)
     expect(screen.queryByText('06:00')).not.toBeInTheDocument()

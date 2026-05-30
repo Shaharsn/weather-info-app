@@ -34,6 +34,16 @@ const maxDefined = (...vals) => {
   return v.length ? Math.max(...v) : null
 }
 
+// Daily highs typically occur ~2–5pm local. Flag a station whose local time is
+// currently in that window (its "now"/high reading is near the day's peak).
+const PEAK_START_HOUR = 14
+const PEAK_END_HOUR = 17 // exclusive
+function isPeakHeatHour(localTime) {
+  if (!localTime) return false
+  const h = Number(localTime.slice(0, 2))
+  return Number.isFinite(h) && h >= PEAK_START_HOUR && h < PEAK_END_HOUR
+}
+
 // metarSeries: array of { obsTime, tempC } sorted ascending (latest last), or undefined.
 // fx: parsed forecast for this station, or null when the forecast is unavailable.
 export function buildStationData(station, metarSeries, fx, nowEpoch) {
@@ -100,6 +110,7 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
     city: station.city, stationLabel: station.stationLabel, icao: station.icao,
     lat: station.lat, lon: station.lon,
     now, localTime,
+    isPeakHour: isPeakHeatHour(localTime), // local time is in the ~2–5pm peak-heat window
     todayHighC,
     observedFloorC: maxDefined(now.tempC, observedMax), // high must never drop below this
     forecastHighC: fx ? fx.todayHighC : null, // MET Norway's own high (a confidence vote)

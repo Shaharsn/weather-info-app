@@ -36,7 +36,12 @@ export default function StationRow({ row, confidenceDeps }) {
         <span className="caret">{open ? '▾' : '▸'}</span>
         <span className="city">{row.city}</span>
         <span className="station-label">{row.stationLabel}</span>
-        <span className="metric"><em>Local</em> {row.localTime}</span>
+        <span className="metric">
+          <em>Local</em> {row.localTime}
+          {row.isPeakHour && (
+            <span className="peak" title="Peak-heat hours (~2–5pm local) — near today's high">🕒</span>
+          )}
+        </span>
         <span className="metric"><em>Now</em> {formatBoth(row.now.tempC)}</span>
         <span className="metric"><em>High</em> {formatBoth(displayedHigh)}</span>
         <span className="metric"><em>Tmrw</em> {formatBoth(row.tomorrowHighC)}</span>
