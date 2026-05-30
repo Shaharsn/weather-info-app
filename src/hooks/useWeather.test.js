@@ -24,6 +24,23 @@ function makeDeps() {
 }
 
 describe('useWeather', () => {
+  it('fetches once per mount and does not loop on re-render', async () => {
+    // Deliberately omit nowEpoch/nowMs/cache so the hook uses its internal
+    // defaults — if those defaults aren't stable, `load` changes every render
+    // and the effect refetches forever. Only the fetchers are injected (as spies).
+    const deps = {
+      fetchMetar: vi.fn().mockResolvedValue({ RKSI: { tempC: 19.5, obsTime: 1 } }),
+      fetchForecast: vi.fn().mockResolvedValue([fxLoc, fxLoc]),
+    }
+    const { result, rerender } = renderHook(() => useWeather(stations, deps))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    rerender()
+    rerender()
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(deps.fetchForecast).toHaveBeenCalledTimes(1)
+    expect(deps.fetchMetar).toHaveBeenCalledTimes(1)
+  })
+
   it('builds rows, requesting METAR only for stations with an ICAO', async () => {
     const deps = makeDeps()
     const { result } = renderHook(() => useWeather(stations, deps))

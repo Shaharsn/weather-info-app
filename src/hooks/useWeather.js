@@ -12,11 +12,17 @@ import {
 // effectively hourly anyway, so this cadence keeps "Now" reasonably fresh too.
 const REFRESH_MS = 30 * 60 * 1000
 
+// Stable module-level defaults. Defining these inline in the hook would create a
+// new function each render, changing `load`'s deps and causing an infinite
+// fetch/re-render loop.
+const defaultNowEpoch = () => Math.floor(Date.now() / 1000)
+const defaultNowMs = () => Date.now()
+
 export function useWeather(stations, deps = {}) {
   const fetchMetar = deps.fetchMetar ?? defaultFetchMetar
   const fetchForecast = deps.fetchForecast ?? defaultFetchForecast
-  const nowEpoch = deps.nowEpoch ?? (() => Math.floor(Date.now() / 1000))
-  const nowMs = deps.nowMs ?? (() => Date.now())
+  const nowEpoch = deps.nowEpoch ?? defaultNowEpoch
+  const nowMs = deps.nowMs ?? defaultNowMs
   const readCache = deps.readForecastCache ?? defaultReadCache
   const writeCache = deps.writeForecastCache ?? defaultWriteCache
 

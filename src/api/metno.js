@@ -16,7 +16,9 @@ export function tzOffsetSeconds(tz, date) {
     hour: '2-digit', minute: '2-digit', second: '2-digit',
   }).formatToParts(date).reduce((a, p) => ((a[p.type] = p.value), a), {})
   const asUTC = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second)
-  return Math.round((asUTC - date.getTime()) / 1000)
+  // Real timezone offsets are whole minutes; round to a minute so a sub-second
+  // `now` can't yield e.g. 32399s (which renders hour labels as ":59").
+  return Math.round((asUTC - date.getTime()) / 60000) * 60
 }
 
 // Pure: met.no timeseries -> the same shape Open-Meteo's parseForecast returns,
