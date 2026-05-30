@@ -1,10 +1,13 @@
 import { fetchJson } from './http.js'
+import { fetchMetnoForecast } from './metno.js'
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
-// Set from backtest winner (run 2026-05-30, MAE 0.659C). '' would mean best_match (default).
+// Open-Meteo model, chosen by the backtest (run 2026-05-30, MAE 0.659C vs ERA5).
+// Used only as a fallback now; MET Norway is the primary source (see fetchForecast).
 export const FORECAST_MODEL = 'ecmwf_ifs025'
 
 // Pure: raw Open-Meteo response (array) -> array of shaped locations (same order).
+// MET Norway's parser returns this same shape, so the merge layer is provider-agnostic.
 export function parseForecast(raw) {
   const arr = Array.isArray(raw) ? raw : [raw]
   return arr.map((loc) => ({
@@ -20,8 +23,8 @@ export function parseForecast(raw) {
   }))
 }
 
-// Fetch all stations in one batched call (comma-separated coords -> array response).
-export async function fetchForecast(stations) {
+// Open-Meteo: all stations in one batched call (comma-separated coords -> array).
+export async function fetchOpenMeteoForecast(stations) {
   if (stations.length === 0) return []
   const lat = stations.map((s) => s.lat).join(',')
   const lon = stations.map((s) => s.lon).join(',')
@@ -36,4 +39,16 @@ export async function fetchForecast(stations) {
   })
   if (FORECAST_MODEL) params.set('models', FORECAST_MODEL)
   return parseForecast(await fetchJson(`${FORECAST_URL}?${params}`))
+}
+
+// Forecast for all stations. MET Norway is primary (free, no key, not per-IP
+// rate-limited, ~1C from METAR in testing); Open-Meteo is the fallback. A thrown
+// error propagates to the caller, which then uses the cached forecast.
+export async function fetchForecast(stations) {
+  if (stations.length === 0) return []
+  try {
+    return await fetchMetnoForecast(stations)
+  } catch {
+    return await fetchOpenMeteoForecast(stations)
+  }
 }

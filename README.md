@@ -13,26 +13,29 @@ Every temperature is shown in **°C and °F together**. Click a row to expand it
 
 | Value | Source | Notes |
 |-------|--------|-------|
-| Current temp ("Now") | **NOAA METAR** (`aviationweather.gov`) | Real airport observations — the same data Weather Underground shows for airport stations. Batched into one request by ICAO code. |
-| Hourly + daily forecast | **Open-Meteo** (`api.open-meteo.com`) | Model: **ECMWF IFS 0.25°** (`ecmwf_ifs025`). |
+| Current temp ("Now") | **NOAA METAR** (`aviationweather.gov`) | Real airport observations — the same data Weather Underground shows for airport stations. Free, no key. Batched into one request by ICAO code. |
+| Hourly + daily forecast | **MET Norway / Yr** (`api.met.no`), primary | Free, no key, global, ECMWF-backed, generous limits. One request per city. |
+| Forecast fallback | **Open-Meteo** (`api.open-meteo.com`) | Used only if MET Norway fails. ECMWF IFS 0.25° model. Rate-limits per IP by number of locations. |
 
-Both APIs are free, need no key, and allow direct browser requests, so the app is fully
-client-side — no backend.
+All sources are free and need no key. METAR and MET Norway are reached through a tiny
+dev/preview proxy (they don't send CORS headers; MET Norway also needs a User-Agent the
+browser can't set). Open-Meteo is called directly.
 
-### Why ECMWF IFS
+### Why MET Norway is primary
 
-`scripts/backtest.mjs` scored four candidate forecast models against ERA5 actuals over the
-prior 14 days at a sample of the stations (mean absolute error of hourly temperature):
+Both MET Norway and Open-Meteo are ECMWF-backed and similarly accurate, but Open-Meteo
+rate-limits per IP weighted by the number of locations — fetching 45 cities repeatedly
+exhausts it. MET Norway has far more forgiving limits, so it's the primary source.
 
-| Model | MAE (°C) |
-|-------|----------|
-| **ecmwf_ifs025** | **0.659** |
-| icon_seamless | 0.872 |
-| best_match | 0.941 |
-| gfs_seamless | 1.173 |
+Verified against **live METAR** across 12 cities (mean absolute error of current temp):
 
-ECMWF IFS was the most accurate, so it is the model used. Re-run the backtest anytime with
-`npm run backtest`.
+| Forecast API | MAE vs METAR (°C) |
+|--------------|-------------------|
+| **MET Norway** | **1.07** |
+| 7Timer | 6.21 |
+
+`scripts/backtest.mjs` also scored Open-Meteo's models against ERA5 (ECMWF IFS won at
+0.659 °C MAE), which is why ECMWF IFS is the Open-Meteo fallback model.
 
 ### Stations without an observation
 
