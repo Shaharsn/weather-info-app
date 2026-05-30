@@ -1,6 +1,6 @@
 # Weather Info App
 
-A single-page React app that shows, for 47 airport weather stations worldwide:
+A single-page React app that shows, for 45 airport weather stations worldwide:
 
 - **Now** — the exact current temperature, a real observation (not a forecast).
 - **Today's High** and **Tomorrow's** high.
@@ -36,10 +36,9 @@ ECMWF IFS was the most accurate, so it is the model used. Re-run the backtest an
 
 ### Stations without an observation
 
-Two locations have no public NOAA METAR — **Hong Kong Observatory** (not an airport) and
-**Karachi / Masroor Airbase** (military). These fall back to Open-Meteo's current reading and
-are tagged **"no station obs"** so a model value is never shown as if it were measured. Any
-station whose METAR is momentarily missing a temperature uses the same tagged fallback.
+All 45 stations have public NOAA METAR. If a station's METAR is momentarily missing a
+temperature, that row falls back to Open-Meteo's current reading and is tagged
+**"no station obs"** so a model value is never shown as if it were measured.
 
 "Today's High" is taken from the forecast's daily max, but never reads below the live
 observed "Now" — if a real observation already exceeds the model's daily max, the observed
@@ -63,7 +62,7 @@ and a "Last updated" timestamp are in the header.
 
 ```
 src/
-  stations.js              # the 47 stations: {city, stationLabel, icao, lat, lon}
+  stations.js              # the 45 stations: {city, stationLabel, icao, lat, lon}
   lib/units.js             # °C↔°F conversion + dual-unit formatting
   lib/merge.js             # combine METAR + forecast into one row view-model
   api/metar.js             # METAR fetch + pure parser

@@ -1,12 +1,10 @@
 // Each: { city, stationLabel, icao, lat, lon }
 // icao === null marks a location with no public NOAA METAR; it uses the
 // Open-Meteo current-temp fallback and is tagged "no station obs" in the UI.
-// No-METAR set (verified live 2026-05-30): Hong Kong Observatory, Karachi/Masroor Airbase (military).
 export const STATIONS = [
   { city: 'Seoul', stationLabel: 'Incheon Intl Airport', icao: 'RKSI', lat: 37.469, lon: 126.451 },
   { city: 'Houston', stationLabel: 'William P. Hobby Airport', icao: 'KHOU', lat: 29.645, lon: -95.279 },
   { city: 'Chicago', stationLabel: "O'Hare Intl Airport", icao: 'KORD', lat: 41.978, lon: -87.904 },
-  { city: 'Hong Kong', stationLabel: 'Hong Kong Observatory', icao: null, lat: 22.302, lon: 114.174 },
   { city: 'Warsaw', stationLabel: 'Warsaw Chopin Airport', icao: 'EPWA', lat: 52.166, lon: 20.967 },
   { city: 'Austin', stationLabel: 'Austin-Bergstrom Intl', icao: 'KAUS', lat: 30.194, lon: -97.670 },
   { city: 'London', stationLabel: 'London City Airport', icao: 'EGLC', lat: 51.505, lon: 0.055 },
@@ -43,7 +41,6 @@ export const STATIONS = [
   { city: 'Istanbul', stationLabel: 'Istanbul Airport', icao: 'LTFM', lat: 41.262, lon: 28.742 },
   { city: 'San Francisco', stationLabel: 'San Francisco Intl', icao: 'KSFO', lat: 37.619, lon: -122.375 },
   { city: 'Moscow', stationLabel: 'Vnukovo Intl Airport', icao: 'UUWW', lat: 55.591, lon: 37.261 },
-  { city: 'Karachi', stationLabel: 'Masroor Airbase', icao: null, lat: 24.894, lon: 66.939 },
   { city: 'Tel Aviv', stationLabel: 'Ben Gurion Intl', icao: 'LLBG', lat: 32.011, lon: 34.887 },
   { city: 'Dallas', stationLabel: 'Dallas Love Field', icao: 'KDAL', lat: 32.847, lon: -96.852 },
   { city: 'Guangzhou', stationLabel: 'Baiyun Intl Airport', icao: 'ZGGG', lat: 23.392, lon: 113.299 },
