@@ -46,4 +46,5 @@ export const STATIONS = [
   { city: 'Guangzhou', stationLabel: 'Baiyun Intl Airport', icao: 'ZGGG', lat: 23.392, lon: 113.299 },
   { city: 'Panama City', stationLabel: 'Marcos A. Gelabert Intl', icao: 'MPMG', lat: 8.973, lon: -79.556 },
   { city: 'Qingdao', stationLabel: 'Jiaodong Intl Airport', icao: 'ZSQD', lat: 36.366, lon: 120.086 },
+  { city: 'Cape Town', stationLabel: 'Cape Town Intl Airport', icao: 'FACT', lat: -33.969, lon: 18.597 },
 ]
