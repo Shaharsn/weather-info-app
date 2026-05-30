@@ -30,6 +30,12 @@ describe('App', () => {
     expect(screen.getByText(/Updated/i)).toBeInTheDocument()
   })
 
+  it('lists places alphabetically by city', () => {
+    const { container } = render(<App />) // hook returns Seoul then London
+    const cities = [...container.querySelectorAll('.city')].map((el) => el.textContent)
+    expect(cities).toEqual(['London', 'Seoul'])
+  })
+
   it('filters the list by the search query (city or station)', () => {
     render(<App />)
     const search = screen.getByRole('searchbox', { name: /search places/i })

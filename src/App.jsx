@@ -10,8 +10,10 @@ export default function App() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter((r) => `${r.city} ${r.stationLabel}`.toLowerCase().includes(q))
+    const matched = q
+      ? rows.filter((r) => `${r.city} ${r.stationLabel}`.toLowerCase().includes(q))
+      : rows
+    return [...matched].sort((a, b) => a.city.localeCompare(b.city))
   }, [rows, query])
 
   return (
