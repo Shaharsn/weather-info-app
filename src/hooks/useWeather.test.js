@@ -45,4 +45,13 @@ describe('useWeather', () => {
     const { result } = renderHook(() => useWeather(stations, deps))
     await waitFor(() => expect(result.current.status).toBe('error'))
   })
+
+  it('still renders forecast-sourced rows when METAR fails entirely', async () => {
+    const deps = makeDeps()
+    deps.fetchMetar = vi.fn().mockRejectedValue(new Error('metar down'))
+    const { result } = renderHook(() => useWeather(stations, deps))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.rows).toHaveLength(2)
+    expect(result.current.rows.every((r) => r.now.source === 'forecast')).toBe(true)
+  })
 })

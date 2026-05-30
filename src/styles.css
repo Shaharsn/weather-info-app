@@ -20,6 +20,7 @@ body { font-family: system-ui, sans-serif; margin: 0; background: #0f1115; color
 .station-row.error .row-main { cursor: default; }
 .row-error { color: #ff8a80; }
 .hourly-strip { padding: 10px 14px; border-top: 1px solid #262b35; }
+.obs-time { font-size: 12px; opacity: 0.6; margin-bottom: 8px; }
 .hours { display: flex; flex-wrap: wrap; gap: 6px; }
 .hour { display: flex; flex-direction: column; padding: 6px 8px; border-radius: 8px; font-size: 12px; min-width: 92px; }
 .hour.observed { background: #16261b; }

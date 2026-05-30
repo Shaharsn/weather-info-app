@@ -27,4 +27,12 @@ describe('HourlyStrip', () => {
     expect(screen.getByText(/Tomorrow/)).toBeInTheDocument()
     expect(screen.getByText('19°C / 66°F')).toBeInTheDocument()
   })
+  it('shows the METAR observation time when source is metar', () => {
+    render(<HourlyStrip row={{ ...row, now: { source: 'metar', obsTime: 1748520000 } }} />)
+    expect(screen.getByText(/Observed at \d\d:\d\dZ/)).toBeInTheDocument()
+  })
+  it('omits observation time for forecast-sourced rows', () => {
+    render(<HourlyStrip row={{ ...row, now: { source: 'forecast', obsTime: null } }} />)
+    expect(screen.queryByText(/Observed at/)).not.toBeInTheDocument()
+  })
 })

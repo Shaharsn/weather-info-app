@@ -19,7 +19,12 @@ export function useWeather(stations, deps = {}) {
     setStatus((s) => (s === 'ready' ? 'ready' : 'loading'))
     try {
       const icaos = stations.map((s) => s.icao).filter(Boolean)
-      const [metarMap, fxArr] = await Promise.all([fetchMetar(icaos), fetchForecast(stations)])
+      // Forecast is the hard dependency. METAR is a soft enhancement: if it fails,
+      // every row still renders via the Open-Meteo current-temp fallback.
+      const [metarMap, fxArr] = await Promise.all([
+        fetchMetar(icaos).catch(() => ({})),
+        fetchForecast(stations),
+      ])
       const now = nowEpoch()
       const built = stations.map((s, i) =>
         buildStationData(s, s.icao ? metarMap[s.icao] : undefined, fxArr[i] ?? null, now),
