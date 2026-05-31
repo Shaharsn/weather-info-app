@@ -8,6 +8,8 @@ export default function StationRow({ row, confidenceDeps }) {
   // Show only the unit the market resolves in: °F for US (tenths) stations,
   // °C for the rest — so there's no cross-unit confusion.
   const unit = row.reportsTenths ? 'F' : 'C'
+  // Raw METAR link covers just today (hours since local midnight).
+  const hoursToday = row.localTime ? Number(row.localTime.slice(0, 2)) + 1 : 12
   const [selected, setSelected] = useState(null) // selected hour's time string
   const confidence = useConfidence(
     { lat: row.lat, lon: row.lon, metnoHighC: row.forecastHighC, reportsTenths: row.reportsTenths },
@@ -68,7 +70,7 @@ export default function StationRow({ row, confidenceDeps }) {
           {row.icao && (
             <a
               className="icao"
-              href={`https://aviationweather.gov/api/data/metar?ids=${row.icao}&format=raw&hours=24`}
+              href={`https://aviationweather.gov/api/data/metar?ids=${row.icao}&format=raw&hours=${hoursToday}`}
               target="_blank"
               rel="noopener noreferrer"
               title={`Open raw ${row.icao} METAR (aviationweather.gov)`}
