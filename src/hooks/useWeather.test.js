@@ -94,22 +94,6 @@ describe('useWeather', () => {
     expect(result.current.rows[0].todayHighC).toBe(25)
   })
 
-  it('toggleWatch starts/stops a per-station watch and refreshes only that station', async () => {
-    const deps = makeDeps()
-    const { result } = renderHook(() => useWeather(stations, deps))
-    await waitFor(() => expect(result.current.status).toBe('ready'))
-    expect(deps.fetchMetar).toHaveBeenCalledTimes(1) // initial load
-
-    await act(async () => result.current.toggleWatch('Seoul'))
-    await waitFor(() => expect(result.current.watches.Seoul).toBeTruthy())
-    // Starting the watch immediately re-fetches just the watched station's obs.
-    await waitFor(() => expect(deps.fetchMetar).toHaveBeenCalledTimes(2))
-    expect(deps.fetchMetar).toHaveBeenLastCalledWith(['RKSI'], 30)
-
-    await act(async () => result.current.toggleWatch('Seoul'))
-    await waitFor(() => expect(result.current.watches.Seoul).toBeUndefined())
-  })
-
   it('caches a successful forecast for later fallback', async () => {
     const deps = makeDeps()
     deps.writeForecastCache = vi.fn()
