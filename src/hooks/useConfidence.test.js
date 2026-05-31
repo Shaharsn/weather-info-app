@@ -34,8 +34,8 @@ describe('useConfidence', () => {
       }),
     )
     await waitFor(() => expect(result.current.status).toBe('ready'))
-    expect(result.current.agreement.consensusC).toBe(29)
-    expect(result.current.agreement.agree).toBe(4) // all within ±1 of 29 (28,29,29,29)
+    expect(result.current.agreement.consensusC).toBe(29) // mode of 29,28,29,29
+    expect(result.current.agreement.agree).toBe(3) // ECMWF, ICON, MET Norway say 29
     expect(result.current.models).toEqual(models)
     expect(writeEnsembleCache).toHaveBeenCalledWith(51.5, 0.05, models, expect.any(Number))
   })

@@ -7,14 +7,24 @@ export function computeAgreement(sites) {
   if (valid.length < 2) return null
 
   const scored = valid.map((s) => ({ name: s.name, highC: s.highC, rounded: Math.round(s.highC) }))
-  const sorted = scored.map((s) => s.rounded).sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  const consensus =
-    sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2)
 
-  // "Agree" = within ±1°C of the consensus. Exact-degree matching is too strict
-  // for continuous model output (a tight 20–23° cluster would read as ~10%).
-  const withAgree = scored.map((s) => ({ ...s, agrees: Math.abs(s.rounded - consensus) <= 1 }))
+  // Consensus = the most common rounded value (mode); ties broken toward the
+  // value nearest the median. "Agree" then means a model says exactly that
+  // number — so every agreeing model shows the same degree.
+  const counts = new Map()
+  for (const s of scored) counts.set(s.rounded, (counts.get(s.rounded) || 0) + 1)
+  const sorted = scored.map((s) => s.rounded).sort((a, b) => a - b)
+  const median = sorted[Math.floor(sorted.length / 2)]
+  let consensus = null
+  let best = -1
+  for (const [val, c] of counts) {
+    if (c > best || (c === best && Math.abs(val - median) < Math.abs(consensus - median))) {
+      best = c
+      consensus = val
+    }
+  }
+
+  const withAgree = scored.map((s) => ({ ...s, agrees: s.rounded === consensus }))
   const agree = withAgree.filter((s) => s.agrees).length
   return {
     consensusC: consensus,

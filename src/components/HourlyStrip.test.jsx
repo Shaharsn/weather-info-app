@@ -91,7 +91,7 @@ describe('HourlyStrip', () => {
     render(<HourlyStrip row={row} confidence={confidence} />)
     expect(screen.getByText(/Model consensus high 29/)).toBeInTheDocument()
     expect(screen.getByText('3/4 agree (75%)')).toBeInTheDocument()
-    expect(screen.getByText('ICON 28°')).toBeInTheDocument()
+    expect(screen.getByText('ICON 28°C / 82°F')).toBeInTheDocument()
   })
 
   it('shows an unavailable note when confidence could not be computed', () => {
