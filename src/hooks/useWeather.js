@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchMetarSeries as defaultFetchMetar } from '../api/metar.js'
 import { fetchForecast as defaultFetchForecast } from '../api/forecast.js'
+import { fetchWuSeries as defaultFetchWu } from '../api/wunderground.js'
 import { buildStationData } from '../lib/merge.js'
 import {
   readForecastCache as defaultReadCache,
@@ -20,6 +21,7 @@ const defaultNowMs = () => Date.now()
 export function useWeather(stations, deps = {}) {
   const fetchMetar = deps.fetchMetar ?? defaultFetchMetar
   const fetchForecast = deps.fetchForecast ?? defaultFetchForecast
+  const fetchWu = deps.fetchWuSeries ?? defaultFetchWu
   const nowEpoch = deps.nowEpoch ?? defaultNowEpoch
   const nowMs = deps.nowMs ?? defaultNowMs
   const readCache = deps.readForecastCache ?? defaultReadCache
@@ -41,11 +43,20 @@ export function useWeather(stations, deps = {}) {
       setStatus((s) => (s === 'ready' ? 'ready' : 'loading'))
       try {
         const icaos = stations.map((s) => s.icao).filter(Boolean)
+        const wuStations = stations.filter((s) => s.wuLocationId)
         const needForecast = force || !fx.current.arr || nowMs() - fx.current.at > FORECAST_MIN_INTERVAL_MS
 
-        const [metarMap, live] = await Promise.all([
+        const [metarMap, live, wuByCity] = await Promise.all([
           fetchMetar(icaos, 30).catch(() => ({})),
           needForecast ? fetchForecast(stations).catch(() => null) : Promise.resolve(undefined),
+          // Observations for non-METAR stations (e.g. Shenzhen → Lau Fau Shan), keyed by city.
+          Promise.all(
+            wuStations.map((s) =>
+              fetchWu(s.wuLocationId, s.tz, nowMs())
+                .then((series) => [s.city, series])
+                .catch(() => [s.city, []]),
+            ),
+          ).then(Object.fromEntries),
         ])
 
         if (needForecast) {
@@ -64,9 +75,10 @@ export function useWeather(stations, deps = {}) {
 
         const fxArr = fx.current.arr
         const now = nowEpoch()
-        const built = stations.map((s, i) =>
-          buildStationData(s, s.icao ? metarMap[s.icao] : undefined, fxArr ? fxArr[i] ?? null : null, now),
-        )
+        const built = stations.map((s, i) => {
+          const obs = s.wuLocationId ? wuByCity[s.city] : s.icao ? metarMap[s.icao] : undefined
+          return buildStationData(s, obs, fxArr ? fxArr[i] ?? null : null, now)
+        })
         setRows(built)
         setForecastError(!fxArr)
         setForecastStaleSince(fx.current.staleSince)
@@ -76,7 +88,7 @@ export function useWeather(stations, deps = {}) {
         setStatus('error')
       }
     },
-    [stations, fetchMetar, fetchForecast, nowEpoch, nowMs, readCache, writeCache],
+    [stations, fetchMetar, fetchForecast, fetchWu, nowEpoch, nowMs, readCache, writeCache],
   )
 
   useEffect(() => {

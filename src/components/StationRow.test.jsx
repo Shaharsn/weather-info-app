@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import StationRow from './StationRow.jsx'
 
@@ -28,14 +28,19 @@ describe('StationRow', () => {
     render(<StationRow row={base} />)
     expect(screen.getByText('RKSI')).toBeInTheDocument()
   })
-  it('shows a ⚠ warning badge when the station has a resolveNote', () => {
-    const { container } = render(<StationRow row={base} />)
-    expect(container.querySelector('.warn-badge')).toBeNull()
-    const { container: c2 } = render(
+  it('never shows a ⚠ warning badge, even with a resolveNote', () => {
+    const { container } = render(
       <StationRow row={{ ...base, resolveNote: 'resolves on a different station' }} />,
     )
-    expect(c2.querySelector('.warn-badge')).toBeInTheDocument()
-    expect(c2.querySelector('.warn-badge')).toHaveAttribute('title', 'resolves on a different station')
+    expect(container.querySelector('.warn-badge')).toBeNull()
+  })
+  it('copies the city name to the clipboard when the city is clicked', () => {
+    const writeText = vi.fn().mockResolvedValue()
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+    render(<StationRow row={base} />)
+    fireEvent.click(screen.getByText('Seoul'))
+    expect(writeText).toHaveBeenCalledWith('Seoul')
+    vi.unstubAllGlobals()
   })
   it('shows a peak-hours clock only when isPeakHour is set', () => {
     const { rerender, container } = render(<StationRow row={base} />)
@@ -49,8 +54,12 @@ describe('StationRow', () => {
     fireEvent.click(screen.getByRole('button', { name: /Seoul/ }))
     expect(screen.getByText('06:00')).toBeInTheDocument()
   })
-  it('tags stations without observations', () => {
-    render(<StationRow row={{ ...base, now: { ...base.now, source: 'forecast' }, hasObs: false }} />)
+  it('tags stations without observations (in the code slot, for non-METAR stations)', () => {
+    render(
+      <StationRow
+        row={{ ...base, icao: null, now: { ...base.now, source: 'forecast' }, hasObs: false }}
+      />,
+    )
     expect(screen.getByText(/no station obs/i)).toBeInTheDocument()
   })
   it('shows an inline error when present', () => {

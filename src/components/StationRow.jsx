@@ -5,6 +5,7 @@ import HourlyStrip from './HourlyStrip.jsx'
 
 export default function StationRow({ row, confidenceDeps }) {
   const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
   // Show only the unit the market resolves in: °F for US (tenths) stations,
   // °C for the rest — so there's no cross-unit confusion.
   const unit = row.reportsTenths ? 'F' : 'C'
@@ -17,11 +18,21 @@ export default function StationRow({ row, confidenceDeps }) {
     confidenceDeps,
   )
 
-  // Once the multi-model ensemble loads, refine the high to the precise consensus
-  // median (decimals kept — no rounding), never below what's already been observed.
-  const medianC = confidence.status === 'ready' ? confidence.agreement.medianC : null
-  const displayedHigh =
-    medianC != null ? Math.max(medianC, row.observedFloorC ?? medianC) : row.todayHighC
+  // Headline high = the observed peak so far folded with the forecast — the same
+  // basis Wunderground resolves on. (The multi-model spread/bucket stays in the
+  // expanded detail; it's a prediction aid, not what the market reads.)
+  const displayedHigh = row.todayHighC
+
+  const copyCity = (e) => {
+    e.stopPropagation()
+    navigator.clipboard?.writeText(row.city).then(
+      () => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1000)
+      },
+      () => {},
+    )
+  }
 
   // Clock sits in a gutter to the LEFT of the card, only when in the peak window.
   const marker = (
@@ -65,10 +76,21 @@ export default function StationRow({ row, confidenceDeps }) {
           }}
         >
           <span className="caret">{open ? '▾' : '▸'}</span>
-          <span className="city">{row.city}</span>
-          {row.resolveNote && <span className="warn-badge" title={row.resolveNote}>⚠</span>}
+          <span
+            className="city"
+            role="button"
+            tabIndex={0}
+            aria-label="Copy city name"
+            title="Click to copy city name"
+            onClick={copyCity}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') copyCity(e)
+            }}
+          >
+            {copied ? '✓ copied' : row.city}
+          </span>
           <span className="station-label">{row.stationLabel}</span>
-          {row.icao && (
+          {row.icao ? (
             <a
               className="icao"
               href={`https://aviationweather.gov/api/data/metar?ids=${row.icao}&format=raw&hours=${hoursToday}`}
@@ -79,12 +101,13 @@ export default function StationRow({ row, confidenceDeps }) {
             >
               {row.icao}
             </a>
+          ) : (
+            !row.hasObs && <span className="badge">no station obs</span>
           )}
           <span className="metric"><em>Local</em> {row.localTime}</span>
           <span className="metric"><em>Now</em> {formatTemp(row.now.tempC, unit)}</span>
           <span className="metric"><em>High</em> {formatTemp(displayedHigh, unit)}</span>
           <span className="metric"><em>Tmrw</em> {formatTemp(row.tomorrowHighC, unit)}</span>
-          {!row.hasObs && <span className="badge">no station obs</span>}
         </div>
         {open && (
           <HourlyStrip

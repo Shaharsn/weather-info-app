@@ -18,6 +18,13 @@ const proxy = {
     rewrite: (p) => p.replace(/^\/metno-api/, ''),
     headers: { 'User-Agent': 'weather-info-app/1.0 (personal, non-commercial)' },
   },
+  // weather.com/Wunderground rejects cross-origin browser calls (401) and sends
+  // no CORS headers. Proxied (same-origin GET, no Origin header) it returns 200.
+  '/wu-api': {
+    target: 'https://api.weather.com',
+    changeOrigin: true,
+    rewrite: (p) => p.replace(/^\/wu-api/, ''),
+  },
 }
 
 export default defineConfig({
