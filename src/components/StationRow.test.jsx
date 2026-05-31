@@ -12,12 +12,17 @@ const base = {
 }
 
 describe('StationRow', () => {
-  it('shows city, now, today high, tomorrow in both units', () => {
-    render(<StationRow row={base} />)
+  it('shows city, now, today high, tomorrow in the market unit (°C here)', () => {
+    render(<StationRow row={base} />) // no reportsTenths -> °C market -> °C only
     expect(screen.getByText('Seoul')).toBeInTheDocument()
     expect(screen.getByText('07:00')).toBeInTheDocument() // local time
-    expect(screen.getByText('12.40°C / 54.32°F')).toBeInTheDocument() // now
-    expect(screen.getByText('18.00°C / 64.40°F')).toBeInTheDocument() // today high
+    expect(screen.getByText('12.40°C')).toBeInTheDocument() // now
+    expect(screen.getByText('18.00°C')).toBeInTheDocument() // today high
+  })
+  it('shows °F only for a US (tenths) station', () => {
+    render(<StationRow row={{ ...base, reportsTenths: true }} />)
+    expect(screen.getByText('54.32°F')).toBeInTheDocument() // now in °F
+    expect(screen.queryByText(/°C/)).not.toBeInTheDocument()
   })
   it('shows the METAR/ICAO code', () => {
     render(<StationRow row={base} />)

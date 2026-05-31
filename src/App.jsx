@@ -2,13 +2,11 @@ import { useMemo, useState } from 'react'
 import { STATIONS } from './stations.js'
 import { useWeather } from './hooks/useWeather.js'
 import StationRow from './components/StationRow.jsx'
-import ConverterModal from './components/ConverterModal.jsx'
 
 export default function App() {
   const { rows, status, lastUpdated, forecastError, forecastStaleSince, refresh } =
     useWeather(STATIONS)
   const [query, setQuery] = useState('')
-  const [showConverter, setShowConverter] = useState(false)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -34,19 +32,9 @@ export default function App() {
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Search places"
           />
-          <button
-            className="icon-btn"
-            onClick={() => setShowConverter(true)}
-            aria-label="Open temperature converter"
-            title="°C ⇄ °F converter"
-          >
-            🧮
-          </button>
           <button onClick={refresh} aria-label="refresh">Refresh</button>
         </div>
       </header>
-
-      {showConverter && <ConverterModal onClose={() => setShowConverter(false)} />}
 
       {status === 'loading' && rows.length === 0 && <p className="notice">Loading…</p>}
       {status === 'error' && rows.length === 0 && (
