@@ -34,11 +34,25 @@ export default function StationRow({ row, confidenceDeps }) {
     )
   }
 
-  // Clock sits in a gutter to the LEFT of the card, only when in the peak window.
+  // Gutter to the LEFT of the card: peak-window clock, plus status flags for
+  // "high coming next hour" (🔥) and "high already in, rest cooler" (❄️).
   const marker = (
     <div className="peak-marker">
       {row.isPeakHour && (
         <span className="peak" title="Peak-heat hours (~2–6pm local) — near today's high">🕒</span>
+      )}
+      {row.peakImminent && (
+        <span className="peak-flag" title="Today's high is forecast for the next hour — peaking soon">
+          🔥
+        </span>
+      )}
+      {row.peakLocked && (
+        <span
+          className="peak-flag"
+          title="Today's high already happened; every remaining hour is forecast lower — high locked in"
+        >
+          ❄️
+        </span>
       )}
     </div>
   )

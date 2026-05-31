@@ -126,8 +126,11 @@ body {
 
 .station-line { display: flex; align-items: flex-start; gap: 6px; }
 .station-line > .station-row { flex: 1; min-width: 0; }
-.peak-marker { flex: 0 0 22px; display: flex; justify-content: center; padding-top: 11px; }
-.peak { cursor: help; font-size: 15px; line-height: 1; }
+.peak-marker {
+  flex: 0 0 22px; display: flex; flex-direction: column; align-items: center;
+  gap: 2px; padding-top: 9px;
+}
+.peak, .peak-flag { cursor: help; font-size: 14px; line-height: 1; }
 .warn-badge { cursor: help; font-size: 14px; }
 
 .badge {

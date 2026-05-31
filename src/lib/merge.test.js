@@ -84,6 +84,41 @@ describe('buildStationData', () => {
     expect(r.hourly.some((h) => h.time === '2026-05-29T02:00' && h.tempC === 30)).toBe(true)
   })
 
+  it('flags peakImminent when the day high is forecast for the very next hour', () => {
+    // now = 07:00 Seoul; next hour 08:00 is the hottest and beats observed (12.4).
+    const fxImminent = {
+      ...fx,
+      hourly: [
+        { time: '2026-05-29T08:00', tempC: 20 }, // next hour — the peak
+        { time: '2026-05-29T12:00', tempC: 18 }, // later, cooler
+      ],
+    }
+    const r = buildStationData(station, series, fxImminent, nowEpoch)
+    expect(r.peakImminent).toBe(true)
+    expect(r.peakLocked).toBe(false)
+  })
+
+  it('does NOT flag peakImminent when the high is hours away', () => {
+    // fx's hottest future hour is 18:00 (well beyond the next 60 min).
+    const r = buildStationData(station, series, fx, nowEpoch)
+    expect(r.peakImminent).toBe(false)
+    expect(r.peakLocked).toBe(false)
+  })
+
+  it('flags peakLocked once the observed peak is in and every later hour is cooler', () => {
+    const hot = [...series, { obsTime: at(2026, 4, 28, 21, 30), tempC: 25 }] // 06:30 = 25 (peak)
+    const fxCooling = {
+      ...fx,
+      hourly: [
+        { time: '2026-05-29T08:00', tempC: 16 }, // future, below the 25 peak
+        { time: '2026-05-29T12:00', tempC: 15 },
+      ],
+    }
+    const r = buildStationData(station, hot, fxCooling, nowEpoch)
+    expect(r.peakLocked).toBe(true)
+    expect(r.peakImminent).toBe(false)
+  })
+
   it('passes through tomorrow high/low and local time', () => {
     const r = buildStationData(station, series, fx, nowEpoch)
     expect(r.tomorrowHighC).toBe(19)

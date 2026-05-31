@@ -128,11 +128,42 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
   // Today's high reflects the real observed peak, the live "now", and the forecast max.
   const todayHighC = maxDefined(fx?.todayHighC, now.tempC, observedMax)
 
+  // Forecast hours still ahead of "now" today, with their local epoch.
+  const futureForecastToday = fx
+    ? fx.hourly
+        .filter((h) => h.time.slice(0, 10) === today && localEpoch(h.time, offset) > nowEpoch)
+        .map((h) => ({ epoch: localEpoch(h.time, offset), tempC: h.tempC }))
+    : []
+
+  // 🔥 peakImminent: the day's high is forecast for the very next hour (within
+  // ~60 min) and still meets/beats everything observed so far — so the peak is
+  // genuinely about to happen.
+  const bestSoFar = maxDefined(observedMax, now.tempC)
+  let peakImminent = false
+  if (futureForecastToday.length) {
+    const hottest = futureForecastToday.reduce((a, b) => (b.tempC > a.tempC ? b : a))
+    peakImminent =
+      hottest.epoch <= nowEpoch + 3600 && (bestSoFar == null || hottest.tempC >= bestSoFar)
+  }
+
+  // ❄️ peakLocked: the daytime peak has already been OBSERVED (it is itself the
+  // displayed high, not a forecast number the station never reached), "now" is
+  // at/below it, and EVERY remaining forecast hour is lower — so the high shown
+  // won't be beaten today.
+  const peakLocked =
+    fx != null &&
+    observedMax != null &&
+    observedMax >= todayHighC &&
+    (now.tempC == null || now.tempC <= observedMax) &&
+    futureForecastToday.every((h) => h.tempC < observedMax)
+
   return {
     city: station.city, stationLabel: station.stationLabel, icao: station.icao,
     lat: station.lat, lon: station.lon, resolveNote: station.resolveNote ?? null,
     now, localTime, reportsTenths,
     isPeakHour: isPeakHeatHour(localTime), // local time is in the ~2–5pm peak-heat window
+    peakImminent, // 🔥 today's high is forecast for the next hour
+    peakLocked, // ❄️ today's high already observed; rest of day forecast lower
     todayHighC,
     observedFloorC: maxDefined(now.tempC, observedMax), // high must never drop below this
     forecastHighC: fx ? fx.todayHighC : null, // MET Norway's own high (a confidence vote)

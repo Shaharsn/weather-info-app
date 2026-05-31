@@ -48,6 +48,13 @@ describe('StationRow', () => {
     rerender(<StationRow row={{ ...base, isPeakHour: true }} />)
     expect(container.querySelector('.peak')).toBeInTheDocument()
   })
+
+  it('shows 🔥 when peakImminent and ❄️ when peakLocked', () => {
+    const { rerender } = render(<StationRow row={{ ...base, peakImminent: true }} />)
+    expect(screen.getByTitle(/next hour/i)).toBeInTheDocument()
+    rerender(<StationRow row={{ ...base, peakLocked: true }} />)
+    expect(screen.getByTitle(/locked in/i)).toBeInTheDocument()
+  })
   it('hides hourly detail until expanded, shows after click', () => {
     render(<StationRow row={base} />)
     expect(screen.queryByText('06:00')).not.toBeInTheDocument()
