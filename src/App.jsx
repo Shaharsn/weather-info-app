@@ -4,7 +4,7 @@ import { useWeather } from './hooks/useWeather.js'
 import StationRow from './components/StationRow.jsx'
 
 export default function App() {
-  const { rows, status, lastUpdated, forecastError, forecastStaleSince, refresh } =
+  const { rows, status, lastUpdated, forecastError, forecastStaleSince, refresh, watches, toggleWatch } =
     useWeather(STATIONS)
   const [query, setQuery] = useState('')
 
@@ -55,7 +55,12 @@ export default function App() {
 
       <div className="list">
         {filtered.map((row) => (
-          <StationRow key={row.city + row.stationLabel} row={row} />
+          <StationRow
+            key={row.city + row.stationLabel}
+            row={row}
+            watchUntil={watches?.[row.city] ?? null}
+            onToggleWatch={() => toggleWatch?.(row.city)}
+          />
         ))}
         {rows.length > 0 && filtered.length === 0 && (
           <p className="notice">No places match “{query}”.</p>

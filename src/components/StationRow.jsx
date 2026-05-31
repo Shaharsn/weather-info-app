@@ -3,9 +3,11 @@ import { formatTemp } from '../lib/units.js'
 import { useConfidence } from '../hooks/useConfidence.js'
 import HourlyStrip from './HourlyStrip.jsx'
 
-export default function StationRow({ row, confidenceDeps }) {
+export default function StationRow({ row, confidenceDeps, watchUntil = null, onToggleWatch }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const isWatched = watchUntil != null && watchUntil > Date.now()
+  const watchMinsLeft = isWatched ? Math.max(1, Math.ceil((watchUntil - Date.now()) / 60000)) : 0
   // Show only the unit the market resolves in: °F for US (tenths) stations,
   // °C for the rest — so there's no cross-unit confusion.
   const unit = row.reportsTenths ? 'F' : 'C'
@@ -34,12 +36,29 @@ export default function StationRow({ row, confidenceDeps }) {
     )
   }
 
-  // Clock sits in a gutter to the LEFT of the card, only when in the peak window.
+  // Clock sits in a gutter to the LEFT of the card. Click it to "watch" this
+  // station — poll its observation every minute for the next hour. It glows
+  // while watching (with the minutes left) and is tinted during peak-heat hours.
   const marker = (
     <div className="peak-marker">
-      {row.isPeakHour && (
-        <span className="peak" title="Peak-heat hours (~2–6pm local) — near today's high">🕒</span>
-      )}
+      <button
+        type="button"
+        className={`watch-btn${isWatched ? ' watching' : ''}${row.isPeakHour ? ' peak' : ''}`}
+        aria-pressed={isWatched}
+        title={
+          isWatched
+            ? `Watching — refreshing every minute, ${watchMinsLeft}m left. Click to stop.`
+            : 'Watch this station: refresh every minute for 60 min' +
+              (row.isPeakHour ? ' (peak-heat hours now — near today’s high)' : '')
+        }
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleWatch?.()
+        }}
+      >
+        🕒
+        {isWatched && <span className="watch-min">{watchMinsLeft}</span>}
+      </button>
     </div>
   )
 

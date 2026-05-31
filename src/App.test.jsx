@@ -15,6 +15,8 @@ vi.mock('./hooks/useWeather.js', () => ({
     forecastError: false,
     forecastStaleSince: null,
     refresh: vi.fn(),
+    watches: {},
+    toggleWatch: vi.fn(),
     rows: [mkRow('Seoul', 'Incheon Intl Airport'), mkRow('London', 'London City Airport')],
   }),
 }))

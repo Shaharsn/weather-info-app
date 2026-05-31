@@ -42,11 +42,26 @@ describe('StationRow', () => {
     expect(writeText).toHaveBeenCalledWith('Seoul')
     vi.unstubAllGlobals()
   })
-  it('shows a peak-hours clock only when isPeakHour is set', () => {
+  it('tints the clock during peak-heat hours', () => {
     const { rerender, container } = render(<StationRow row={base} />)
-    expect(container.querySelector('.peak')).toBeNull()
+    expect(container.querySelector('.watch-btn.peak')).toBeNull()
     rerender(<StationRow row={{ ...base, isPeakHour: true }} />)
-    expect(container.querySelector('.peak')).toBeInTheDocument()
+    expect(container.querySelector('.watch-btn.peak')).toBeInTheDocument()
+  })
+
+  it('clicking the clock toggles a watch (and does not expand the row)', () => {
+    const onToggleWatch = vi.fn()
+    const { container } = render(<StationRow row={base} onToggleWatch={onToggleWatch} />)
+    fireEvent.click(container.querySelector('.watch-btn'))
+    expect(onToggleWatch).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('06:00')).not.toBeInTheDocument() // row stayed collapsed
+  })
+
+  it('shows the watching state with minutes remaining when a watch is active', () => {
+    const { container } = render(<StationRow row={base} watchUntil={Date.now() + 30 * 60 * 1000} />)
+    const btn = container.querySelector('.watch-btn.watching')
+    expect(btn).toBeInTheDocument()
+    expect(btn.textContent).toMatch(/30/) // ~30 minutes left
   })
   it('hides hourly detail until expanded, shows after click', () => {
     render(<StationRow row={base} />)
