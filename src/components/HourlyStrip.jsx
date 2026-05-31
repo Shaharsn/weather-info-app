@@ -68,10 +68,12 @@ function HourDetail({ card, models }) {
   return (
     <div className="hour-detail">
       <div className="hd-head">
-        {time} forecast — by source
+        {time} — by source
         {hourAgree && (
           <>
-            {' '}· most round to <strong className="pct">{hourAgree.consensusC}°</strong> ({hourAgree.agree}/{hourAgree.total})
+            {' '}· median {formatBoth(hourAgree.medianC)} → likely METAR{' '}
+            <strong className={`pct ${confidenceClass(hourAgree.pct)}`}>{hourAgree.consensusC}°</strong>{' '}
+            · {hourAgree.agree}/{hourAgree.total} ({hourAgree.pct}%)
           </>
         )}
       </div>

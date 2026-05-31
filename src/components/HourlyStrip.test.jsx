@@ -68,8 +68,8 @@ describe('HourlyStrip', () => {
     const { container } = render(
       <HourlyStrip row={row} confidence={confidence} selected="2026-05-29T18:00" />,
     )
-    expect(screen.getByText(/18:00 forecast — by source/)).toBeInTheDocument()
-    expect(screen.getByText(/most round to/)).toBeInTheDocument()
+    expect(screen.getByText(/18:00 — by source/)).toBeInTheDocument()
+    expect(screen.getByText(/likely METAR/)).toBeInTheDocument()
     expect(screen.getByText(/ECMWF 16.20°C \/ 61.16°F/)).toBeInTheDocument()
     // consensus at this hour is 16 (ECMWF, GFS, MET Norway round to 16); GEM (14) disagrees
     expect(container.querySelectorAll('.hd-row.agree').length).toBe(3)
