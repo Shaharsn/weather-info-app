@@ -19,7 +19,7 @@ export default function StationRow({ row, confidenceDeps, wunderDeps }) {
     confidenceDeps,
   )
   // Wunderground's own per-hour values (obs + its forecast) — shown beside ours.
-  const wuByHour = useWunderground(row.lat, row.lon, row.tz, open, row.wuLocationId, wunderDeps)
+  const wuByHour = useWunderground(row.lat, row.lon, row.tz, open, row.wuCode, wunderDeps)
 
   // "High" is the OBSERVED running daily max — the exact thing Wunderground /
   // Polymarket resolve on. The forecast is shown separately as a projection, so a

@@ -1,7 +1,7 @@
 // Each: { city, stationLabel, icao, lat, lon, tz }
 // tz is an IANA timezone, used to show each place's local time independently of
 // the forecast API (so local time still works when the forecast is unavailable).
-export const STATIONS = [
+const RAW = [
   { city: 'Seoul', stationLabel: 'Incheon Intl Airport', icao: 'RKSI', lat: 37.469, lon: 126.451, tz: 'Asia/Seoul' },
   { city: 'Houston', stationLabel: 'William P. Hobby Airport', icao: 'KHOU', lat: 29.645, lon: -95.279, tz: 'America/Chicago' },
   { city: 'Chicago', stationLabel: "O'Hare Intl Airport", icao: 'KORD', lat: 41.978, lon: -87.904, tz: 'America/Chicago' },
@@ -52,3 +52,25 @@ export const STATIONS = [
   { city: 'Qingdao', stationLabel: 'Jiaodong Intl Airport', icao: 'ZSQD', lat: 36.366, lon: 120.086, tz: 'Asia/Shanghai' },
   { city: 'Cape Town', stationLabel: 'Cape Town Intl Airport', icao: 'FACT', lat: -33.969, lon: 18.597, tz: 'Africa/Johannesburg' },
 ]
+
+// ISO-2 country per ICAO, used to build each station's Wunderground station code
+// ("ICAO:9:CC"). Reading the per-hour WU value through this code matches what the
+// WU website (and Polymarket) resolve on — WU's by-lat/lon path can round the same
+// station's temps ~1° differently (verified: Lau Fau Shan code=29 vs geocode=30).
+const WU_CC = {
+  RKSI: 'KR', KHOU: 'US', KORD: 'US', EPWA: 'PL', KAUS: 'US', EGLC: 'GB', ZSPD: 'CN',
+  LFPB: 'FR', ZBAA: 'CN', EDDM: 'DE', KLGA: 'US', KBKF: 'US', MMMX: 'MX', KMIA: 'US',
+  WSSS: 'SG', RJTT: 'JP', EHAM: 'NL', NZWN: 'NZ', LEMD: 'ES', RCSS: 'TW', VILK: 'IN',
+  LIMC: 'IT', RPLL: 'PH', WMKK: 'MY', OEJN: 'SA', EFHK: 'FI', ZHHH: 'CN', KSEA: 'US',
+  LTAC: 'TR', KATL: 'US', ZUUU: 'CN', ZUCK: 'CN', KLAX: 'US', SBGR: 'BR', RKPK: 'KR',
+  LTFM: 'TR', KSFO: 'US', UUWW: 'RU', LLBG: 'IL', KDAL: 'US', ZGGG: 'CN', MPMG: 'PA',
+  ZSQD: 'CN', FACT: 'ZA',
+}
+
+// wuCode: the WU station code each hourly card reads its "WU" value through.
+// Shenzhen keeps its explicit resolution station (wuLocationId); the rest derive
+// "ICAO:9:CC" from their airport code.
+export const STATIONS = RAW.map((s) => ({
+  ...s,
+  wuCode: s.wuLocationId ?? (s.icao && WU_CC[s.icao] ? `${s.icao}:9:${WU_CC[s.icao]}` : null),
+}))
