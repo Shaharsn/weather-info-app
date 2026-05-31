@@ -2,43 +2,33 @@ import { describe, it, expect } from 'vitest'
 import { computeAgreement } from './agreement.js'
 
 describe('computeAgreement', () => {
-  it('uses the most common value (mode) as consensus, counting exact matches', () => {
+  it('picks the consensus 2°F bucket and counts models in it', () => {
+    // highs in °C -> °F: 30→86, 30.3→87(86–87), 30.6→87(86–87? cToF=87.08→87),
+    // 31→88(88–89), 28→82(82–83)
     const sites = [
-      { name: 'ECMWF', highC: 21.1 }, // 21
-      { name: 'GFS', highC: 21.7 }, // 22
-      { name: 'ICON', highC: 22.0 }, // 22
-      { name: 'GEM', highC: 24.0 }, // 24
-      { name: 'UKMO', highC: 22.2 }, // 22
-      { name: 'MET Norway', highC: 22.4 }, // 22
+      { name: 'A', highC: 30.0 }, // 86°F -> 86–87
+      { name: 'B', highC: 30.3 }, // 86.54 -> 87°F -> 86–87
+      { name: 'C', highC: 30.6 }, // 87.08 -> 87°F -> 86–87
+      { name: 'D', highC: 31.0 }, // 87.8 -> 88°F -> 88–89
+      { name: 'E', highC: 28.0 }, // 82.4 -> 82°F -> 82–83
     ]
     const a = computeAgreement(sites)
-    expect(a.consensusC).toBe(22) // 22 is the most common rounded value (4x)
-    expect(a.agree).toBe(4) // GFS, ICON, UKMO, MET Norway
-    expect(a.total).toBe(6)
-    expect(a.pct).toBe(67)
-    // precise median of [21.1,21.7,22.0,22.2,22.4,24.0] = (22.0+22.2)/2 = 22.1
-    expect(a.medianC).toBeCloseTo(22.1, 5)
+    expect(a.bucketLabel).toBe('86–87') // most common bucket (A,B,C)
+    expect(a.agree).toBe(3)
+    expect(a.total).toBe(5)
+    expect(a.pct).toBe(60)
+    expect(a.sites.find((s) => s.name === 'D').agrees).toBe(false) // 88–89
+    expect(a.sites.find((s) => s.name === 'A').roundedF).toBe(86)
   })
 
-  it('reports 100% when every site says the same number', () => {
-    const a = computeAgreement([
-      { name: 'A', highC: 23 }, { name: 'B', highC: 23.4 }, { name: 'C', highC: 22.6 },
-    ])
-    expect(a.consensusC).toBe(23)
-    expect(a.pct).toBe(100)
-  })
-
-  it('only marks exact-number matches as agreeing', () => {
-    const a = computeAgreement([
-      { name: 'A', highC: 25 }, { name: 'B', highC: 25 }, { name: 'C', highC: 24 },
-    ])
-    expect(a.consensusC).toBe(25)
-    expect(a.sites.find((s) => s.name === 'C').agrees).toBe(false) // 24 ≠ 25
-    expect(a.sites.find((s) => s.name === 'A').agrees).toBe(true)
+  it('exposes a precise median and a °C reference', () => {
+    const a = computeAgreement([{ name: 'A', highC: 30 }, { name: 'B', highC: 31 }])
+    expect(a.medianC).toBeCloseTo(30.5, 5)
+    expect(typeof a.consensusC).toBe('number')
   })
 
   it('returns null with fewer than 2 numeric sites', () => {
-    expect(computeAgreement([{ name: 'A', highC: 29 }])).toBeNull()
-    expect(computeAgreement([{ name: 'A', highC: 29 }, { name: 'B', highC: null }])).toBeNull()
+    expect(computeAgreement([{ name: 'A', highC: 30 }])).toBeNull()
+    expect(computeAgreement([{ name: 'A', highC: 30 }, { name: 'B', highC: null }])).toBeNull()
   })
 })

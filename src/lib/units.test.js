@@ -1,17 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cToF, fToC, formatBoth, fahrenheitBucket } from './units.js'
-
-describe('fahrenheitBucket', () => {
-  it('maps each whole °C to its 2°F Polymarket bucket', () => {
-    expect(fahrenheitBucket(29)).toBe('84–85') // 84.2°F
-    expect(fahrenheitBucket(30)).toBe('86–87') // 86.0°F
-    expect(fahrenheitBucket(31)).toBe('88–89') // 87.8 -> 88
-    expect(fahrenheitBucket(32)).toBe('90–91') // 89.6 -> 90
-  })
-  it('returns null for missing input', () => {
-    expect(fahrenheitBucket(null)).toBeNull()
-  })
-})
+import { cToF, fToC, formatBoth } from './units.js'
 
 describe('cToF', () => {
   it('converts 0C to 32F', () => expect(cToF(0)).toBe(32))

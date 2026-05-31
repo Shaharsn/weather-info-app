@@ -69,9 +69,9 @@ describe('HourlyStrip', () => {
       <HourlyStrip row={row} confidence={confidence} selected="2026-05-29T18:00" />,
     )
     expect(screen.getByText(/18:00 — by source/)).toBeInTheDocument()
-    expect(screen.getByText(/likely METAR/)).toBeInTheDocument()
+    expect(screen.getByText(/bucket/)).toBeInTheDocument()
     expect(screen.getByText(/ECMWF 16.20°C \/ 61.16°F/)).toBeInTheDocument()
-    // consensus at this hour is 16 (ECMWF, GFS, MET Norway round to 16); GEM (14) disagrees
+    // °F buckets: ECMWF 61, GFS 60, MET 61 -> 60–61 bucket; GEM (57) disagrees
     expect(container.querySelectorAll('.hd-row.agree').length).toBe(3)
     expect(container.querySelectorAll('.hd-row.disagree').length).toBe(1)
   })
@@ -85,20 +85,20 @@ describe('HourlyStrip', () => {
     const confidence = {
       status: 'ready',
       agreement: {
-        consensusC: 29, medianC: 29.05, agree: 3, total: 4, pct: 75,
+        bucketLabel: '84–85', consensusC: 29, medianC: 29.05, agree: 3, total: 4, pct: 75,
         sites: [
-          { name: 'ECMWF', highC: 29.1, rounded: 29, agrees: true },
-          { name: 'ICON', highC: 28.4, rounded: 28, agrees: false },
-          { name: 'MET Norway', highC: 29.2, rounded: 29, agrees: true },
-          { name: 'GFS', highC: 29.0, rounded: 29, agrees: true },
+          { name: 'ECMWF', highC: 29.1, roundedF: 84, agrees: true },
+          { name: 'ICON', highC: 28.4, roundedF: 83, agrees: false },
+          { name: 'MET Norway', highC: 29.2, roundedF: 85, agrees: true },
+          { name: 'GFS', highC: 29.0, roundedF: 84, agrees: true },
         ],
       },
     }
     render(<HourlyStrip row={row} confidence={confidence} />)
-    expect(screen.getByText(/likely METAR/)).toBeInTheDocument()
-    expect(screen.getByText('29°C')).toBeInTheDocument() // likely METAR integer
+    expect(screen.getByText(/bucket/)).toBeInTheDocument()
+    expect(screen.getByText('84–85°F')).toBeInTheDocument() // the bid bucket
     expect(screen.getByText('3/4 (75%)')).toBeInTheDocument()
-    expect(screen.getByText('ICON 28.40°C / 83.12°F')).toBeInTheDocument() // decimals, not rounded
+    expect(screen.getByText(/ICON 28.40°C \/ 83.12°F/)).toBeInTheDocument() // decimals, not rounded
   })
 
   it('shows an unavailable note when confidence could not be computed', () => {
@@ -108,7 +108,7 @@ describe('HourlyStrip', () => {
 
   it('renders nothing extra when confidence is absent', () => {
     render(<HourlyStrip row={row} />)
-    expect(screen.queryByText(/likely METAR/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Models’ high median/)).not.toBeInTheDocument()
   })
 
   it('shows the METAR observation time when source is metar', () => {

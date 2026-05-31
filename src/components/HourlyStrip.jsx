@@ -1,4 +1,4 @@
-import { formatBoth, fahrenheitBucket } from '../lib/units.js'
+import { formatBoth } from '../lib/units.js'
 import { computeAgreement } from '../lib/agreement.js'
 
 function obsTimeLabel(epochSec) {
@@ -24,9 +24,8 @@ function Agreement({ confidence }) {
   return (
     <div className="agreement">
       <div className="agreement-head">
-        Models’ high median {formatBoth(a.medianC)} → likely METAR{' '}
-        <strong className="pct">{a.consensusC}°C</strong>{' '}
-        <span className="bucket">≈ {fahrenheitBucket(a.consensusC)}°F bucket</span> ·{' '}
+        Models’ high median {formatBoth(a.medianC)} → bucket{' '}
+        <span className="bucket">{a.bucketLabel}°F</span> (~{a.consensusC}°C) ·{' '}
         <strong className={`pct ${confidenceClass(a.pct)}`}>
           {a.agree}/{a.total} ({a.pct}%)
         </strong>
@@ -35,7 +34,7 @@ function Agreement({ confidence }) {
       <div className="agreement-sites">
         {a.sites.map((s) => (
           <span key={s.name} className={`vote ${s.agrees ? 'agree' : 'disagree'}`}>
-            {s.name} {formatBoth(s.highC)} <span className="hd-round">→ {s.rounded}°</span>
+            {s.name} {formatBoth(s.highC)} <span className="hd-round">→ {s.roundedF}°F</span>
           </span>
         ))}
       </div>
@@ -63,8 +62,9 @@ function HourDetail({ card, models }) {
     .filter((r) => typeof r.tempC === 'number')
   if (typeof card.tempC === 'number') rows.push({ name: 'MET Norway', tempC: card.tempC, primary: true })
 
-  // How the sources round at this hour (the same way METAR will).
+  // How the sources bucket at this hour (in °F, the way the market resolves).
   const hourAgree = computeAgreement(rows.map((r) => ({ name: r.name, highC: r.tempC })))
+  const primaryNames = new Set(rows.filter((r) => r.primary).map((r) => r.name))
 
   return (
     <div className="hour-detail">
@@ -72,24 +72,24 @@ function HourDetail({ card, models }) {
         {time} — by source
         {hourAgree && (
           <>
-            {' '}· median {formatBoth(hourAgree.medianC)} → likely METAR{' '}
-            <strong className={`pct ${confidenceClass(hourAgree.pct)}`}>{hourAgree.consensusC}°</strong>{' '}
-            <span className="bucket">≈ {fahrenheitBucket(hourAgree.consensusC)}°F</span>{' '}
-            · {hourAgree.agree}/{hourAgree.total} ({hourAgree.pct}%)
+            {' '}· median {formatBoth(hourAgree.medianC)} → bucket{' '}
+            <span className="bucket">{hourAgree.bucketLabel}°F</span> (~{hourAgree.consensusC}°C) ·{' '}
+            <strong className={`pct ${confidenceClass(hourAgree.pct)}`}>
+              {hourAgree.agree}/{hourAgree.total} ({hourAgree.pct}%)
+            </strong>
           </>
         )}
       </div>
-      {rows.length ? (
+      {hourAgree ? (
         <div className="hd-rows">
-          {rows.map((r) => {
-            const agrees = hourAgree ? Math.round(r.tempC) === hourAgree.consensusC : null
-            const cls = agrees === null ? '' : agrees ? ' agree' : ' disagree'
-            return (
-              <span key={r.name} className={`hd-row${cls}${r.primary ? ' primary' : ''}`}>
-                {r.name} {formatBoth(r.tempC)} <span className="hd-round">→ {Math.round(r.tempC)}°</span>
-              </span>
-            )
-          })}
+          {hourAgree.sites.map((s) => (
+            <span
+              key={s.name}
+              className={`hd-row ${s.agrees ? 'agree' : 'disagree'}${primaryNames.has(s.name) ? ' primary' : ''}`}
+            >
+              {s.name} {formatBoth(s.highC)} <span className="hd-round">→ {s.roundedF}°F</span>
+            </span>
+          ))}
         </div>
       ) : (
         <div className="muted">Per-source values unavailable (forecast service rate-limited).</div>
