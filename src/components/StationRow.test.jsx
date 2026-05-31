@@ -28,6 +28,15 @@ describe('StationRow', () => {
     render(<StationRow row={base} />)
     expect(screen.getByText('RKSI')).toBeInTheDocument()
   })
+  it('shows a ⚠ warning badge when the station has a resolveNote', () => {
+    const { container } = render(<StationRow row={base} />)
+    expect(container.querySelector('.warn-badge')).toBeNull()
+    const { container: c2 } = render(
+      <StationRow row={{ ...base, resolveNote: 'resolves on a different station' }} />,
+    )
+    expect(c2.querySelector('.warn-badge')).toBeInTheDocument()
+    expect(c2.querySelector('.warn-badge')).toHaveAttribute('title', 'resolves on a different station')
+  })
   it('shows a peak-hours clock only when isPeakHour is set', () => {
     const { rerender, container } = render(<StationRow row={base} />)
     expect(container.querySelector('.peak')).toBeNull()

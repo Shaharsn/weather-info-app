@@ -66,6 +66,7 @@ export default function StationRow({ row, confidenceDeps }) {
         >
           <span className="caret">{open ? '▾' : '▸'}</span>
           <span className="city">{row.city}</span>
+          {row.resolveNote && <span className="warn-badge" title={row.resolveNote}>⚠</span>}
           <span className="station-label">{row.stationLabel}</span>
           {row.icao && (
             <a

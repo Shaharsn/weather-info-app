@@ -121,7 +121,7 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
 
   return {
     city: station.city, stationLabel: station.stationLabel, icao: station.icao,
-    lat: station.lat, lon: station.lon,
+    lat: station.lat, lon: station.lon, resolveNote: station.resolveNote ?? null,
     now, localTime, reportsTenths,
     isPeakHour: isPeakHeatHour(localTime), // local time is in the ~2–5pm peak-heat window
     todayHighC,
