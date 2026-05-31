@@ -7,14 +7,13 @@ import {
   writeForecastCache as defaultWriteCache,
 } from '../lib/forecastCache.js'
 
-// Forecasts change little over short spans, and Open-Meteo rate-limits by the
-// number of locations, so refresh sparingly. METAR (current temp) is cheap and
-// effectively hourly anyway, so this cadence keeps "Now" reasonably fresh too.
-const REFRESH_MS = 30 * 60 * 1000
+// Refresh the current temp (METAR — free, observations update through the day)
+// often, but re-pull the forecast (MET Norway — must not be hammered) sparingly.
+const REFRESH_MS = 5 * 60 * 1000 // METAR cadence
+const FORECAST_MIN_INTERVAL_MS = 25 * 60 * 1000 // don't auto-refetch forecast more often than this
 
-// Stable module-level defaults. Defining these inline in the hook would create a
-// new function each render, changing `load`'s deps and causing an infinite
-// fetch/re-render loop.
+// Stable module-level defaults (defining inline would change load()'s identity
+// every render and cause an infinite fetch loop).
 const defaultNowEpoch = () => Math.floor(Date.now() / 1000)
 const defaultNowMs = () => Date.now()
 
@@ -29,55 +28,62 @@ export function useWeather(stations, deps = {}) {
   const [rows, setRows] = useState([])
   const [status, setStatus] = useState('loading') // loading | ready | error
   const [lastUpdated, setLastUpdated] = useState(null)
-  const [forecastError, setForecastError] = useState(false) // no forecast at all (live or cached)
-  const [forecastStaleSince, setForecastStaleSince] = useState(null) // Date when serving cached forecast
+  const [forecastError, setForecastError] = useState(false)
+  const [forecastStaleSince, setForecastStaleSince] = useState(null)
   const timer = useRef(null)
+  // Last forecast we're using, so METAR-only refreshes can reuse it.
+  const fx = useRef({ arr: null, at: 0, staleSince: null })
 
-  const load = useCallback(async () => {
-    setStatus((s) => (s === 'ready' ? 'ready' : 'loading'))
-    try {
-      const icaos = stations.map((s) => s.icao).filter(Boolean)
-      // Both sources are soft. METAR failure still leaves forecast-sourced rows.
-      // Forecast failure falls back to the last cached forecast (if recent); only
-      // when there's no live and no cached forecast do rows blank their forecast.
-      // METAR series = the last ~30h of observations per station: enough to cover
-      // every hour already elapsed today in any timezone.
-      const [metarMap, liveForecast] = await Promise.all([
-        fetchMetar(icaos, 30).catch(() => ({})),
-        fetchForecast(stations).catch(() => null),
-      ])
+  // force=true (manual refresh / first load) always re-pulls the forecast;
+  // the periodic METAR tick only re-pulls it once it's older than the min interval.
+  const load = useCallback(
+    async (force = false) => {
+      setStatus((s) => (s === 'ready' ? 'ready' : 'loading'))
+      try {
+        const icaos = stations.map((s) => s.icao).filter(Boolean)
+        const needForecast = force || !fx.current.arr || nowMs() - fx.current.at > FORECAST_MIN_INTERVAL_MS
 
-      let fxArr = liveForecast
-      let staleSince = null
-      if (liveForecast) {
-        writeCache(liveForecast, nowMs())
-      } else {
-        const cached = readCache(nowMs())
-        if (cached) {
-          fxArr = cached.fxArr
-          staleSince = new Date(cached.savedAt)
+        const [metarMap, live] = await Promise.all([
+          fetchMetar(icaos, 30).catch(() => ({})),
+          needForecast ? fetchForecast(stations).catch(() => null) : Promise.resolve(undefined),
+        ])
+
+        if (needForecast) {
+          if (live) {
+            writeCache(live, nowMs())
+            fx.current = { arr: live, at: nowMs(), staleSince: null }
+          } else {
+            const cached = readCache(nowMs())
+            if (cached) {
+              fx.current = { arr: cached.fxArr, at: cached.savedAt, staleSince: new Date(cached.savedAt) }
+            } else {
+              fx.current = { arr: null, at: 0, staleSince: null }
+            }
+          }
         }
-      }
 
-      const now = nowEpoch()
-      const built = stations.map((s, i) =>
-        buildStationData(s, s.icao ? metarMap[s.icao] : undefined, fxArr ? fxArr[i] ?? null : null, now),
-      )
-      setRows(built)
-      setForecastError(!fxArr)
-      setForecastStaleSince(staleSince)
-      setLastUpdated(new Date())
-      setStatus('ready')
-    } catch (e) {
-      setStatus('error')
-    }
-  }, [stations, fetchMetar, fetchForecast, nowEpoch, nowMs, readCache, writeCache])
+        const fxArr = fx.current.arr
+        const now = nowEpoch()
+        const built = stations.map((s, i) =>
+          buildStationData(s, s.icao ? metarMap[s.icao] : undefined, fxArr ? fxArr[i] ?? null : null, now),
+        )
+        setRows(built)
+        setForecastError(!fxArr)
+        setForecastStaleSince(fx.current.staleSince)
+        setLastUpdated(new Date())
+        setStatus('ready')
+      } catch (e) {
+        setStatus('error')
+      }
+    },
+    [stations, fetchMetar, fetchForecast, nowEpoch, nowMs, readCache, writeCache],
+  )
 
   useEffect(() => {
-    load()
-    timer.current = setInterval(load, REFRESH_MS)
+    load(true)
+    timer.current = setInterval(() => load(false), REFRESH_MS)
     return () => clearInterval(timer.current)
   }, [load])
 
-  return { rows, status, lastUpdated, forecastError, forecastStaleSince, refresh: load }
+  return { rows, status, lastUpdated, forecastError, forecastStaleSince, refresh: () => load(true) }
 }
