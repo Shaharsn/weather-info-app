@@ -31,36 +31,40 @@ export function computeAgreement(sites, reportsTenths = true) {
     }
   })
 
-  // Consensus bucket = the most common 2°F bucket; ties broken toward the median.
-  const counts = new Map()
-  for (const s of scored) counts.set(s.bucketLow, (counts.get(s.bucketLow) || 0) + 1)
-  const sortedB = scored.map((s) => s.bucketLow).sort((a, b) => a - b)
-  const medianBucket = sortedB[Math.floor(sortedB.length / 2)]
-  let bucketLowF = null
-  let best = -1
-  for (const [val, c] of counts) {
-    if (c > best || (c === best && Math.abs(val - medianBucket) < Math.abs(bucketLowF - medianBucket))) {
-      best = c
-      bucketLowF = val
-    }
-  }
-
-  const withAgree = scored.map((s) => ({ ...s, agrees: s.bucketLow === bucketLowF }))
-  const agree = withAgree.filter((s) => s.agrees).length
-
-  // Precise median (no rounding) for display, in both units.
+  // Precise median (no rounding) and the whole-°C reference.
   const sc = valid.map((s) => s.highC).sort((a, b) => a - b)
   const m = Math.floor(sc.length / 2)
   const medianC = sc.length % 2 ? sc[m] : (sc[m - 1] + sc[m]) / 2
-
-  // °C reference = the rounded median high (the honest whole-°C value; for
-  // °C-resolved European markets this is what resolves).
   const consensusC = Math.round(medianC)
 
+  // Agreement is measured in the unit the market actually resolves in:
+  //  • °F markets (US): the 2°F bucket — consensus = the most common bucket.
+  //  • °C markets (everyone else): the whole °C — consensus = the rounded median,
+  //    and a model agrees when its own high rounds to that same whole degree.
+  let bucketLowF = null
+  let withAgree
+  if (reportsTenths) {
+    const counts = new Map()
+    for (const s of scored) counts.set(s.bucketLow, (counts.get(s.bucketLow) || 0) + 1)
+    const sortedB = scored.map((s) => s.bucketLow).sort((a, b) => a - b)
+    const medianBucket = sortedB[Math.floor(sortedB.length / 2)]
+    let best = -1
+    for (const [val, c] of counts) {
+      if (c > best || (c === best && Math.abs(val - medianBucket) < Math.abs(bucketLowF - medianBucket))) {
+        best = c
+        bucketLowF = val
+      }
+    }
+    withAgree = scored.map((s) => ({ ...s, agrees: s.bucketLow === bucketLowF }))
+  } else {
+    withAgree = scored.map((s) => ({ ...s, agrees: s.roundedC === consensusC }))
+  }
+  const agree = withAgree.filter((s) => s.agrees).length
+
   return {
-    bucketLowF,
-    bucketLabel: `${bucketLowF}–${bucketLowF + 1}`, // °F bucket (the bid target)
-    consensusC, // °C reference
+    bucketLowF, // null for °C markets
+    bucketLabel: bucketLowF != null ? `${bucketLowF}–${bucketLowF + 1}` : null,
+    consensusC, // the whole-°C consensus (what °C markets resolve on)
     medianC,
     agree,
     total: withAgree.length,

@@ -11,6 +11,20 @@ function confidenceClass(pct) {
   return 'low'
 }
 
+// What a source/consensus resolves to, in the market's unit: a 2°F bucket for
+// °F markets, a single whole °C for °C markets.
+const targetLabel = (s, unit) => (unit === 'F' ? `${s.roundedF}°F` : `${s.roundedC}°C`)
+function ConsensusTarget({ a, unit }) {
+  if (unit === 'F') {
+    return (
+      <>
+        bucket <span className="bucket">{a.bucketLabel}°F</span> (~{a.consensusC}°C)
+      </>
+    )
+  }
+  return <span className="bucket">{a.consensusC}°C</span>
+}
+
 // Default view (no hour selected): the multi-model consensus for today's high.
 function Agreement({ confidence, unit }) {
   if (!confidence || confidence.status === 'idle') return null
@@ -24,9 +38,7 @@ function Agreement({ confidence, unit }) {
   return (
     <div className="agreement">
       <div className="agreement-head">
-        Models’ high median {formatTemp(a.medianC, unit)} → bucket{' '}
-        <span className="bucket">{a.bucketLabel}°F</span>
-        {unit !== 'F' && ` (~${a.consensusC}°C)`} ·{' '}
+        Models’ high median {formatTemp(a.medianC, unit)} → <ConsensusTarget a={a} unit={unit} /> ·{' '}
         <strong className={`pct ${confidenceClass(a.pct)}`}>
           {a.agree}/{a.total} ({a.pct}%)
         </strong>
@@ -35,7 +47,7 @@ function Agreement({ confidence, unit }) {
       <div className="agreement-sites">
         {a.sites.map((s) => (
           <span key={s.name} className={`vote ${s.agrees ? 'agree' : 'disagree'}`}>
-            {s.name} {formatTemp(s.highC, unit)} <span className="hd-round">→ {s.roundedF}°F</span>
+            {s.name} {formatTemp(s.highC, unit)} <span className="hd-round">→ {targetLabel(s, unit)}</span>
           </span>
         ))}
       </div>
@@ -61,11 +73,9 @@ function HourDetail({ card, models, reportsTenths, unit }) {
   const rows = (models || [])
     .map((m) => ({ name: m.name, tempC: m.hourly?.[card.time] }))
     .filter((r) => typeof r.tempC === 'number')
-  if (typeof card.tempC === 'number') rows.push({ name: 'MET Norway', tempC: card.tempC, primary: true })
 
-  // How the sources bucket at this hour (in °F, the way the market resolves).
+  // How the sources resolve at this hour, in the market's unit.
   const hourAgree = computeAgreement(rows.map((r) => ({ name: r.name, highC: r.tempC })), reportsTenths)
-  const primaryNames = new Set(rows.filter((r) => r.primary).map((r) => r.name))
 
   return (
     <div className="hour-detail">
@@ -73,9 +83,8 @@ function HourDetail({ card, models, reportsTenths, unit }) {
         {time} — by source
         {hourAgree && (
           <>
-            {' '}· median {formatTemp(hourAgree.medianC, unit)} → bucket{' '}
-            <span className="bucket">{hourAgree.bucketLabel}°F</span>
-            {unit !== 'F' && ` (~${hourAgree.consensusC}°C)`} ·{' '}
+            {' '}· median {formatTemp(hourAgree.medianC, unit)} →{' '}
+            <ConsensusTarget a={hourAgree} unit={unit} /> ·{' '}
             <strong className={`pct ${confidenceClass(hourAgree.pct)}`}>
               {hourAgree.agree}/{hourAgree.total} ({hourAgree.pct}%)
             </strong>
@@ -85,19 +94,13 @@ function HourDetail({ card, models, reportsTenths, unit }) {
       {hourAgree ? (
         <div className="hd-rows">
           {hourAgree.sites.map((s) => (
-            <span
-              key={s.name}
-              className={`hd-row ${s.agrees ? 'agree' : 'disagree'}${primaryNames.has(s.name) ? ' primary' : ''}`}
-            >
-              {s.name} {formatTemp(s.highC, unit)} <span className="hd-round">→ {s.roundedF}°F</span>
+            <span key={s.name} className={`hd-row ${s.agrees ? 'agree' : 'disagree'}`}>
+              {s.name} {formatTemp(s.highC, unit)} <span className="hd-round">→ {targetLabel(s, unit)}</span>
             </span>
           ))}
         </div>
       ) : (
         <div className="muted">Per-source values unavailable (forecast service rate-limited).</div>
-      )}
-      {!models?.length && typeof card.tempC === 'number' && (
-        <div className="muted hd-note">Other models unavailable right now.</div>
       )}
     </div>
   )

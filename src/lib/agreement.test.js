@@ -21,12 +21,14 @@ describe('computeAgreement', () => {
     expect(a.sites.find((s) => s.name === 'A').roundedF).toBe(86)
   })
 
-  it('whole-°C station: rounds to °C first so only achievable °F occur', () => {
-    // A whole-°C station (Shenzhen) reading ~30.6°C: METAR says 31°C -> 88°F,
-    // NOT 87°F. So the bucket must be 88–89, not 86–87.
+  it('°C market: resolves on the whole °C, not a °F bucket', () => {
+    // A whole-°C / °C-resolved station. Median 30.65 -> 31°C; both models round
+    // to 31, so they agree. No °F bucket applies.
     const a = computeAgreement([{ name: 'A', highC: 30.6 }, { name: 'B', highC: 30.7 }], false)
-    expect(a.bucketLabel).toBe('88–89') // 31°C -> 87.8 -> 88°F
-    expect(a.sites[0].roundedF).toBe(88)
+    expect(a.consensusC).toBe(31)
+    expect(a.bucketLabel).toBeNull()
+    expect(a.sites[0].roundedC).toBe(31)
+    expect(a.agree).toBe(2)
   })
 
   it('tenths station: rounds °F directly so odd °F can occur', () => {
