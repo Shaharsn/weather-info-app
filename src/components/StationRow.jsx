@@ -46,17 +46,37 @@ export default function StationRow({ row, confidenceDeps }) {
     <div className="station-line">
       {marker}
       <div className="station-row">
-        <button className="row-main" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <div
+          className="row-main"
+          role="button"
+          tabIndex={0}
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              setOpen((o) => !o)
+            }
+          }}
+        >
           <span className="caret">{open ? '▾' : '▸'}</span>
           <span className="city">{row.city}</span>
           <span className="station-label">{row.stationLabel}</span>
-          {row.icao && <span className="icao" title="METAR / ICAO station code">{row.icao}</span>}
+          {row.icao && (
+            <span
+              className="icao"
+              title="METAR / ICAO station code (selectable)"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {row.icao}
+            </span>
+          )}
           <span className="metric"><em>Local</em> {row.localTime}</span>
           <span className="metric"><em>Now</em> {formatBoth(row.now.tempC)}</span>
           <span className="metric"><em>High</em> {formatBoth(displayedHigh)}</span>
           <span className="metric"><em>Tmrw</em> {formatBoth(row.tomorrowHighC)}</span>
           {!row.hasObs && <span className="badge">no station obs</span>}
-        </button>
+        </div>
         {open && (
           <HourlyStrip
             row={row}
