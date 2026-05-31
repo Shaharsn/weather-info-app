@@ -43,7 +43,7 @@ function Agreement({ confidence }) {
 }
 
 // Selected hour: what each source said for that hour.
-function HourDetail({ card, models }) {
+function HourDetail({ card, models, reportsTenths }) {
   const time = card.time.slice(11, 16)
 
   if (card.observed) {
@@ -63,7 +63,7 @@ function HourDetail({ card, models }) {
   if (typeof card.tempC === 'number') rows.push({ name: 'MET Norway', tempC: card.tempC, primary: true })
 
   // How the sources bucket at this hour (in °F, the way the market resolves).
-  const hourAgree = computeAgreement(rows.map((r) => ({ name: r.name, highC: r.tempC })))
+  const hourAgree = computeAgreement(rows.map((r) => ({ name: r.name, highC: r.tempC })), reportsTenths)
   const primaryNames = new Set(rows.filter((r) => r.primary).map((r) => r.name))
 
   return (
@@ -101,7 +101,7 @@ function HourDetail({ card, models }) {
   )
 }
 
-export default function HourlyStrip({ row, confidence, selected, onSelect }) {
+export default function HourlyStrip({ row, confidence, reportsTenths, selected, onSelect }) {
   const temps = row.hourly.map((h) => h.tempC).filter((n) => typeof n === 'number')
   const max = temps.length ? Math.max(...temps) : null
   const min = temps.length ? Math.min(...temps) : null
@@ -135,7 +135,7 @@ export default function HourlyStrip({ row, confidence, selected, onSelect }) {
       </div>
 
       {selectedCard ? (
-        <HourDetail card={selectedCard} models={confidence?.models} />
+        <HourDetail card={selectedCard} models={confidence?.models} reportsTenths={reportsTenths} />
       ) : (
         <Agreement confidence={confidence} />
       )}

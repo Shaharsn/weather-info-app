@@ -27,7 +27,7 @@ export function useConfidence(target, enabled, deps = {}) {
 
     const settle = (models) => {
       const sites = [...models, { name: 'MET Norway', highC: target.metnoHighC }]
-      const agreement = computeAgreement(sites)
+      const agreement = computeAgreement(sites, target.reportsTenths)
       if (!cancelled) setState({ status: agreement ? 'ready' : 'unavailable', agreement, models })
     }
 

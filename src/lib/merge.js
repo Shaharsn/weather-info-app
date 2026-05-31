@@ -49,6 +49,10 @@ function isPeakHeatHour(localTime) {
 export function buildStationData(station, metarSeries, fx, nowEpoch) {
   const series = Array.isArray(metarSeries) ? metarSeries : []
   const localTime = station.tz ? localTimeInZone(nowEpoch, station.tz) : null
+  // Does this station report sub-degree (0.1°C) temps? US stations do; many
+  // others report only whole °C. This decides how the °F bucket is rounded:
+  // whole-°C stations can only land on even-ish °F (so 86–87°F = exactly 30°C).
+  const reportsTenths = series.length ? series.some((o) => !Number.isInteger(o.tempC)) : true
 
   // Most recent observation (robust to unsorted input, though series is sorted).
   const latest = series.length ? series.reduce((a, b) => (b.obsTime > a.obsTime ? b : a)) : null
@@ -118,7 +122,7 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
   return {
     city: station.city, stationLabel: station.stationLabel, icao: station.icao,
     lat: station.lat, lon: station.lon,
-    now, localTime,
+    now, localTime, reportsTenths,
     isPeakHour: isPeakHeatHour(localTime), // local time is in the ~2–5pm peak-heat window
     todayHighC,
     observedFloorC: maxDefined(now.tempC, observedMax), // high must never drop below this

@@ -1,4 +1,4 @@
-import { cToF } from './units.js'
+import { cToF, fToC } from './units.js'
 
 // Even-°F start of the 2°F Polymarket bucket containing whole-°F value f
 // (…, 84–85, 86–87, 88–89, …).
@@ -7,13 +7,21 @@ const bucketLowOf = (f) => f - (((f % 2) + 2) % 2)
 // Model-agreement consensus for today's high, computed in whole °F — the unit
 // the markets resolve on. (°F is finer than °C, so the °C value alone can't
 // determine the 2°F bucket.) Also returns °C references for European markets.
+//
+// reportsTenths: whether the resolving station reports sub-degree temps.
+//   true  (US/Miami): the high is precise → round straight to whole °F.
+//   false (whole-°C stations like Shenzhen): the high is whole °C → round to
+//         °C first, then to °F, so only the achievable °F values occur
+//         (29°C→84, 30°C→86, 31°C→88; 85/87/89°F never happen).
+//
 // sites: [{ name, highC }]. Returns null when there aren't enough sites.
-export function computeAgreement(sites) {
+export function computeAgreement(sites, reportsTenths = true) {
   const valid = (sites || []).filter((s) => typeof s.highC === 'number')
   if (valid.length < 2) return null
 
+  const stationF = (c) => Math.round(cToF(reportsTenths ? c : Math.round(c)))
   const scored = valid.map((s) => {
-    const roundedF = Math.round(cToF(s.highC))
+    const roundedF = stationF(s.highC)
     return {
       name: s.name,
       highC: s.highC,
@@ -45,17 +53,14 @@ export function computeAgreement(sites) {
   const m = Math.floor(sc.length / 2)
   const medianC = sc.length % 2 ? sc[m] : (sc[m - 1] + sc[m]) / 2
 
-  // °C reference (mode of whole °C) for °C-resolved markets.
-  const cCounts = new Map()
-  for (const s of scored) cCounts.set(s.roundedC, (cCounts.get(s.roundedC) || 0) + 1)
-  let consensusC = null
-  let cb = -1
-  for (const [val, c] of cCounts) if (c > cb) { cb = c; consensusC = val }
+  // °C reference, derived from the consensus bucket so it stays consistent with
+  // it (e.g. 86–87°F ↔ 30°C). For °C-resolved (European) markets this is the value.
+  const consensusC = Math.round(fToC(bucketLowF))
 
   return {
     bucketLowF,
     bucketLabel: `${bucketLowF}–${bucketLowF + 1}`, // °F bucket (the bid target)
-    consensusC, // °C reference
+    consensusC, // °C reference (matches the bucket)
     medianC,
     agree,
     total: withAgree.length,

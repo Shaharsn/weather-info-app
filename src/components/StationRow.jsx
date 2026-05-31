@@ -7,7 +7,7 @@ export default function StationRow({ row, confidenceDeps }) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState(null) // selected hour's time string
   const confidence = useConfidence(
-    { lat: row.lat, lon: row.lon, metnoHighC: row.forecastHighC },
+    { lat: row.lat, lon: row.lon, metnoHighC: row.forecastHighC, reportsTenths: row.reportsTenths },
     open,
     confidenceDeps,
   )
@@ -84,6 +84,7 @@ export default function StationRow({ row, confidenceDeps }) {
           <HourlyStrip
             row={row}
             confidence={confidence}
+            reportsTenths={row.reportsTenths}
             selected={selected}
             onSelect={(t) => setSelected((cur) => (cur === t ? null : t))}
           />

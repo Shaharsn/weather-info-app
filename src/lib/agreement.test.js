@@ -21,6 +21,21 @@ describe('computeAgreement', () => {
     expect(a.sites.find((s) => s.name === 'A').roundedF).toBe(86)
   })
 
+  it('whole-°C station: rounds to °C first so only achievable °F occur', () => {
+    // A whole-°C station (Shenzhen) reading ~30.6°C: METAR says 31°C -> 88°F,
+    // NOT 87°F. So the bucket must be 88–89, not 86–87.
+    const a = computeAgreement([{ name: 'A', highC: 30.6 }, { name: 'B', highC: 30.7 }], false)
+    expect(a.bucketLabel).toBe('88–89') // 31°C -> 87.8 -> 88°F
+    expect(a.sites[0].roundedF).toBe(88)
+  })
+
+  it('tenths station: rounds °F directly so odd °F can occur', () => {
+    // Miami ~30.6°C precise -> 87.08°F -> 87°F -> 86–87 bucket.
+    const a = computeAgreement([{ name: 'A', highC: 30.6 }, { name: 'B', highC: 30.5 }], true)
+    expect(a.bucketLabel).toBe('86–87')
+    expect(a.sites[0].roundedF).toBe(87)
+  })
+
   it('exposes a precise median and a °C reference', () => {
     const a = computeAgreement([{ name: 'A', highC: 30 }, { name: 'B', highC: 31 }])
     expect(a.medianC).toBeCloseTo(30.5, 5)
