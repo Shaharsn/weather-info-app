@@ -79,7 +79,7 @@ describe('HourlyStrip', () => {
     const confidence = {
       status: 'ready',
       agreement: {
-        consensusC: 29, agree: 3, total: 4, pct: 75,
+        consensusC: 29, medianC: 29.05, agree: 3, total: 4, pct: 75,
         sites: [
           { name: 'ECMWF', highC: 29.1, rounded: 29, agrees: true },
           { name: 'ICON', highC: 28.4, rounded: 28, agrees: false },
@@ -89,9 +89,10 @@ describe('HourlyStrip', () => {
       },
     }
     render(<HourlyStrip row={row} confidence={confidence} />)
-    expect(screen.getByText(/Model consensus high 29/)).toBeInTheDocument()
-    expect(screen.getByText('3/4 agree (75%)')).toBeInTheDocument()
-    expect(screen.getByText('ICON 28°C / 82°F')).toBeInTheDocument()
+    expect(screen.getByText(/likely METAR/)).toBeInTheDocument()
+    expect(screen.getByText('29°C')).toBeInTheDocument() // likely METAR integer
+    expect(screen.getByText('3/4 (75%)')).toBeInTheDocument()
+    expect(screen.getByText('ICON 28.40°C / 83.12°F')).toBeInTheDocument() // decimals, not rounded
   })
 
   it('shows an unavailable note when confidence could not be computed', () => {
@@ -101,7 +102,7 @@ describe('HourlyStrip', () => {
 
   it('renders nothing extra when confidence is absent', () => {
     render(<HourlyStrip row={row} />)
-    expect(screen.queryByText(/Model consensus/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/likely METAR/)).not.toBeInTheDocument()
   })
 
   it('shows the METAR observation time when source is metar', () => {

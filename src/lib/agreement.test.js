@@ -16,6 +16,8 @@ describe('computeAgreement', () => {
     expect(a.agree).toBe(4) // GFS, ICON, UKMO, MET Norway
     expect(a.total).toBe(6)
     expect(a.pct).toBe(67)
+    // precise median of [21.1,21.7,22.0,22.2,22.4,24.0] = (22.0+22.2)/2 = 22.1
+    expect(a.medianC).toBeCloseTo(22.1, 5)
   })
 
   it('reports 100% when every site says the same number', () => {

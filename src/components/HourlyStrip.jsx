@@ -23,16 +23,17 @@ function Agreement({ confidence }) {
   return (
     <div className="agreement">
       <div className="agreement-head">
-        Model consensus high {a.consensusC}°C —{' '}
+        Models’ high median {formatBoth(a.medianC)} → likely METAR{' '}
+        <strong className="pct">{a.consensusC}°C</strong> ·{' '}
         <strong className={`pct ${confidenceClass(a.pct)}`}>
-          {a.agree}/{a.total} agree ({a.pct}%)
+          {a.agree}/{a.total} ({a.pct}%)
         </strong>
         <span className="hint"> · click an hour for its per-source values</span>
       </div>
       <div className="agreement-sites">
         {a.sites.map((s) => (
           <span key={s.name} className={`vote ${s.agrees ? 'agree' : 'disagree'}`}>
-            {s.name} {formatBoth(s.rounded, 0)}
+            {s.name} {formatBoth(s.highC)}
           </span>
         ))}
       </div>

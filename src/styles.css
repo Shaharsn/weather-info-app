@@ -106,8 +106,9 @@ body {
   font-size: 11px; letter-spacing: 0.5px; color: #aeb9d0;
   background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
   padding: 1px 6px; border-radius: 5px;
-  user-select: all; cursor: text; /* click selects the whole code to copy */
+  text-decoration: none; cursor: pointer;
 }
+.row-main .icao:hover { border-color: #3a6df0; color: #cdd9ff; }
 .row-main .metric { white-space: nowrap; }
 .row-main .metric em {
   font-style: normal; color: var(--muted); margin-right: 5px;

@@ -24,10 +24,17 @@ export function computeAgreement(sites) {
     }
   }
 
+  // Precise central value (median of the raw highs, no rounding) — shown with
+  // decimals so you can see exactly where it sits relative to a degree boundary.
+  const rawSorted = valid.map((s) => s.highC).sort((a, b) => a - b)
+  const m = Math.floor(rawSorted.length / 2)
+  const medianC = rawSorted.length % 2 ? rawSorted[m] : (rawSorted[m - 1] + rawSorted[m]) / 2
+
   const withAgree = scored.map((s) => ({ ...s, agrees: s.rounded === consensus }))
   const agree = withAgree.filter((s) => s.agrees).length
   return {
-    consensusC: consensus,
+    consensusC: consensus, // most likely whole-°C METAR value (round-to-nearest)
+    medianC, // precise central forecast (decimals)
     agree,
     total: withAgree.length,
     pct: Math.round((agree / withAgree.length) * 100),
