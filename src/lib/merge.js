@@ -114,12 +114,14 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
         .map((h) => ({ time: h.time, tempC: h.tempC, observed: false }))
     : []
 
-  // Always include a card for the current hour. If there's no observation for it,
-  // it shows "TBD" rather than being omitted.
+  // Always include a card for the current hour. If it has no observation yet,
+  // show the forecast for that hour (flagged `pending` so the UI tints it) rather
+  // than a blank "TBD" — the value is "on check" until the observation lands.
   const nowHourKey = localHourStr(nowEpoch, offset)
+  const nowForecastC = fx?.hourly.find((h) => h.time === nowHourKey)?.tempC ?? null
   const nowPlaceholder = observedKeys.has(nowHourKey)
     ? []
-    : [{ time: nowHourKey, tempC: null, observed: false, isNow: true }]
+    : [{ time: nowHourKey, tempC: nowForecastC, observed: false, isNow: true, pending: true }]
 
   const hourly = [...observedHours, ...nowPlaceholder, ...forecastHours].sort((a, b) =>
     a.time < b.time ? -1 : 1,
@@ -159,7 +161,7 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
 
   return {
     city: station.city, stationLabel: station.stationLabel, icao: station.icao,
-    lat: station.lat, lon: station.lon, resolveNote: station.resolveNote ?? null,
+    lat: station.lat, lon: station.lon, tz: station.tz, resolveNote: station.resolveNote ?? null,
     now, localTime, reportsTenths,
     isPeakHour: isPeakHeatHour(localTime), // local time is in the ~2–5pm peak-heat window
     peakImminent, // 🔥 today's high is forecast for the next hour

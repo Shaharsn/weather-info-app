@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { formatTemp } from '../lib/units.js'
 import { useConfidence } from '../hooks/useConfidence.js'
+import { useWunderground } from '../hooks/useWunderground.js'
 import HourlyStrip from './HourlyStrip.jsx'
 
-export default function StationRow({ row, confidenceDeps }) {
+export default function StationRow({ row, confidenceDeps, wunderDeps }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   // Show only the unit the market resolves in: °F for US (tenths) stations,
@@ -17,6 +18,8 @@ export default function StationRow({ row, confidenceDeps }) {
     open,
     confidenceDeps,
   )
+  // Wunderground's own per-hour values (obs + its forecast) — shown beside ours.
+  const wuByHour = useWunderground(row.lat, row.lon, row.tz, open, wunderDeps)
 
   // "High" is the OBSERVED running daily max — the exact thing Wunderground /
   // Polymarket resolve on. The forecast is shown separately as a projection, so a
@@ -142,6 +145,7 @@ export default function StationRow({ row, confidenceDeps }) {
           <HourlyStrip
             row={row}
             confidence={confidence}
+            wuByHour={wuByHour}
             reportsTenths={row.reportsTenths}
             unit={unit}
             selected={selected}

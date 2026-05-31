@@ -148,6 +148,17 @@ describe('buildStationData', () => {
     expect(nowCard).toMatchObject({ tempC: null, isNow: true })
   })
 
+  it('puts the forecast (pending) on the current-hour card when the forecast has it', () => {
+    const gap = [
+      { obsTime: at(2026, 4, 28, 15, 0), tempC: 8 }, // Seoul 00:00
+      { obsTime: at(2026, 4, 28, 21, 0), tempC: 11 }, // Seoul 06:00 (07:00 unobserved)
+    ]
+    const fxNow = { ...fx, hourly: [...fx.hourly, { time: '2026-05-29T07:00', tempC: 15 }] }
+    const r = buildStationData(station, gap, fxNow, nowEpoch)
+    const nowCard = r.hourly.find((h) => h.time === '2026-05-29T07:00')
+    expect(nowCard).toMatchObject({ tempC: 15, isNow: true, pending: true }) // forecast, not TBD
+  })
+
   it('does not add a placeholder when the current hour is observed', () => {
     const r = buildStationData(station, series, fx, nowEpoch) // has 07:00 obs
     expect(r.hourly.filter((h) => h.isNow)).toHaveLength(0)

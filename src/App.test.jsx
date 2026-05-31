@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 
-const mkRow = (city, stationLabel) => ({
+const mkRow = (city, stationLabel, localTime = '12:00') => ({
   city, stationLabel, icao: 'X',
   now: { tempC: 12, source: 'metar', obsTime: 1 },
-  localTime: '12:00', todayHighC: 18, tomorrowHighC: 19, tomorrowLowC: 7,
+  localTime, todayHighC: 18, tomorrowHighC: 19, tomorrowLowC: 7,
   hourly: [], hasObs: true, forecastMissing: false, error: null,
 })
 
@@ -15,7 +15,9 @@ vi.mock('./hooks/useWeather.js', () => ({
     forecastError: false,
     forecastStaleSince: null,
     refresh: vi.fn(),
-    rows: [mkRow('Seoul', 'Incheon Intl Airport'), mkRow('London', 'London City Airport')],
+    // Seoul earlier local time than London, but later alphabetically — so a
+    // local-time sort flips them vs an alphabetical one.
+    rows: [mkRow('Seoul', 'Incheon Intl Airport', '09:00'), mkRow('London', 'London City Airport', '20:00')],
   }),
 }))
 
@@ -30,10 +32,10 @@ describe('App', () => {
     expect(screen.getByText(/Updated/i)).toBeInTheDocument()
   })
 
-  it('lists places alphabetically by city', () => {
-    const { container } = render(<App />) // hook returns Seoul then London
+  it('sorts places by local time (earliest first)', () => {
+    const { container } = render(<App />) // Seoul 09:00, London 20:00
     const cities = [...container.querySelectorAll('.city')].map((el) => el.textContent)
-    expect(cities).toEqual(['London', 'Seoul'])
+    expect(cities).toEqual(['Seoul', 'London']) // by time, not alphabetical (which would be London, Seoul)
   })
 
   it('filters the list by the search query (city or station)', () => {

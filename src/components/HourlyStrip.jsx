@@ -106,7 +106,7 @@ function HourDetail({ card, models, reportsTenths, unit }) {
   )
 }
 
-export default function HourlyStrip({ row, confidence, reportsTenths, unit = 'both', selected, onSelect }) {
+export default function HourlyStrip({ row, confidence, wuByHour, reportsTenths, unit = 'both', selected, onSelect }) {
   const temps = row.hourly.map((h) => h.tempC).filter((n) => typeof n === 'number')
   const max = temps.length ? Math.max(...temps) : null
   const min = temps.length ? Math.min(...temps) : null
@@ -124,16 +124,18 @@ export default function HourlyStrip({ row, confidence, reportsTenths, unit = 'bo
           const cold = spread && h.tempC === min
           const kind = h.isNow ? 'now' : h.observed ? 'observed' : 'forecast'
           const isSel = h.time === selected
+          const wu = wuByHour?.[h.time] // Wunderground's value for this hour
           return (
             <button
               key={h.time}
               type="button"
               onClick={() => onSelect?.(h.time)}
-              className={`hour ${kind}${hot ? ' hot' : ''}${cold ? ' cold' : ''}${isSel ? ' selected' : ''}`}
+              className={`hour ${kind}${h.pending ? ' pending' : ''}${hot ? ' hot' : ''}${cold ? ' cold' : ''}${isSel ? ' selected' : ''}`}
             >
               <span className="hour-label">{h.time.slice(11, 16)}</span>
               <span className="hour-temp">{h.tempC == null ? 'TBD' : formatTemp(h.tempC, unit)}</span>
-              <span className="hour-tag">{kind}</span>
+              {wu != null && <span className="hour-wu">WU {formatTemp(wu, unit)}</span>}
+              <span className="hour-tag">{h.pending ? 'now · on check' : kind}</span>
             </button>
           )
         })}

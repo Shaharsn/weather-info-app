@@ -13,7 +13,10 @@ export default function App() {
     const matched = q
       ? rows.filter((r) => `${r.city} ${r.stationLabel}`.toLowerCase().includes(q))
       : rows
-    return [...matched].sort((a, b) => a.city.localeCompare(b.city))
+    // Order by each place's current local time (earliest clock first), then city.
+    return [...matched].sort(
+      (a, b) => (a.localTime || '').localeCompare(b.localTime || '') || a.city.localeCompare(b.city),
+    )
   }, [rows, query])
 
   return (

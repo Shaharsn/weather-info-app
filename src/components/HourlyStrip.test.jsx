@@ -48,6 +48,23 @@ describe('HourlyStrip', () => {
     expect(screen.getByText('TBD')).toBeInTheDocument()
     expect(container.querySelector('.hour.now')).toHaveTextContent('TBD')
   })
+  it('shows the Wunderground value beside ours on each card', () => {
+    render(
+      <HourlyStrip row={row} unit="C" wuByHour={{ '2026-05-29T06:00': 11, '2026-05-29T18:00': 17 }} />,
+    )
+    expect(screen.getByText('WU 11.00°C')).toBeInTheDocument()
+    expect(screen.getByText('WU 17.00°C')).toBeInTheDocument()
+  })
+  it('marks the current-hour forecast card as pending ("on check"), not TBD', () => {
+    const r = {
+      ...row,
+      hourly: [{ time: '2026-05-29T17:00', tempC: 15, observed: false, isNow: true, pending: true }],
+    }
+    const { container } = render(<HourlyStrip row={r} unit="C" />)
+    expect(container.querySelector('.hour.pending')).toBeInTheDocument()
+    expect(screen.getByText('15.00°C')).toBeInTheDocument() // forecast value, not TBD
+    expect(screen.getByText(/on check/)).toBeInTheDocument()
+  })
   it('calls onSelect with the clicked hour', () => {
     const onSelect = vi.fn()
     render(<HourlyStrip row={row} onSelect={onSelect} />)
