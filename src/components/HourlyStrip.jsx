@@ -1,4 +1,5 @@
 import { formatBoth } from '../lib/units.js'
+import { computeAgreement } from '../lib/agreement.js'
 
 function obsTimeLabel(epochSec) {
   return new Date(epochSec * 1000).toISOString().slice(11, 16) + 'Z'
@@ -61,9 +62,19 @@ function HourDetail({ card, models }) {
     .filter((r) => typeof r.tempC === 'number')
   if (typeof card.tempC === 'number') rows.push({ name: 'MET Norway', tempC: card.tempC, primary: true })
 
+  // How the sources round at this hour (the same way METAR will).
+  const hourAgree = computeAgreement(rows.map((r) => ({ name: r.name, highC: r.tempC })))
+
   return (
     <div className="hour-detail">
-      <div className="hd-head">{time} forecast — by source</div>
+      <div className="hd-head">
+        {time} forecast — by source
+        {hourAgree && (
+          <>
+            {' '}· most round to <strong className="pct">{hourAgree.consensusC}°</strong> ({hourAgree.agree}/{hourAgree.total})
+          </>
+        )}
+      </div>
       {rows.length ? (
         <div className="hd-rows">
           {rows.map((r) => (
