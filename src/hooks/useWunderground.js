@@ -8,7 +8,7 @@ import { fetchWuTimeline as defaultFetch } from '../api/wunderground.js'
 const cache = new Map() // 'lat,lon' -> { at, byHour }
 const TTL_MS = 5 * 60 * 1000
 
-export function useWunderground(lat, lon, tz, enabled, deps = {}) {
+export function useWunderground(lat, lon, tz, enabled, wuLocationId = null, deps = {}) {
   const fetchTimeline = deps.fetchWuTimeline ?? defaultFetch
   const nowMs = deps.nowMs ?? (() => Date.now())
   const [byHour, setByHour] = useState(null)
@@ -17,14 +17,14 @@ export function useWunderground(lat, lon, tz, enabled, deps = {}) {
   useEffect(() => {
     if (!enabled || started.current || lat == null) return
     started.current = true
-    const key = `${lat},${lon}`
+    const key = `${lat},${lon}:${wuLocationId ?? ''}`
     const hit = cache.get(key)
     if (hit && nowMs() - hit.at < TTL_MS) {
       setByHour(hit.byHour)
       return
     }
     let cancelled = false
-    fetchTimeline(lat, lon, tz, nowMs())
+    fetchTimeline(lat, lon, tz, nowMs(), wuLocationId)
       .then((bh) => {
         if (cancelled) return
         cache.set(key, { at: nowMs(), byHour: bh })

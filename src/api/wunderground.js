@@ -80,9 +80,16 @@ export function mergeWuTimeline(obs, fcst, offset, nowSec) {
 
 // Wunderground's view of today per local hour: observations (past + current) plus
 // its own hourly forecast (future), keyed 'YYYY-MM-DDTHH:00' to match the cards.
-export async function fetchWuTimeline(lat, lon, tz, nowMs = Date.now()) {
+// When a station has a WU station code (wuLocationId), read observations through
+// it — the by-lat/lon path can round the SAME station's temps ~1° differently
+// than the station-code path the WU website resolves on (Lau Fau Shan: code says
+// 29 at 13:00, geocode says 30). The forecast is always by coords.
+export async function fetchWuTimeline(lat, lon, tz, nowMs = Date.now(), wuLocationId = null) {
+  const obsPromise = wuLocationId
+    ? fetchWuSeries(wuLocationId, tz, nowMs)
+    : fetchWuObsByGeocode(lat, lon, tz, nowMs)
   const [obs, fcst] = await Promise.all([
-    fetchWuObsByGeocode(lat, lon, tz, nowMs).catch(() => []),
+    obsPromise.catch(() => []),
     fetchWuHourlyForecast(lat, lon).catch(() => []),
   ])
   return mergeWuTimeline(obs, fcst, tzOffsetSeconds(tz, new Date(nowMs)), Math.floor(nowMs / 1000))
