@@ -34,7 +34,7 @@ function Agreement({ confidence }) {
       <div className="agreement-sites">
         {a.sites.map((s) => (
           <span key={s.name} className={`vote ${s.agrees ? 'agree' : 'disagree'}`}>
-            {s.name} {formatBoth(s.highC)}
+            {s.name} {formatBoth(s.highC)} <span className="hd-round">→ {s.rounded}°</span>
           </span>
         ))}
       </div>
