@@ -1,4 +1,4 @@
-import { formatBoth } from '../lib/units.js'
+import { formatTemp } from '../lib/units.js'
 import { computeAgreement } from '../lib/agreement.js'
 
 function obsTimeLabel(epochSec) {
@@ -12,7 +12,7 @@ function confidenceClass(pct) {
 }
 
 // Default view (no hour selected): the multi-model consensus for today's high.
-function Agreement({ confidence }) {
+function Agreement({ confidence, unit }) {
   if (!confidence || confidence.status === 'idle') return null
   if (confidence.status === 'loading') {
     return <div className="agreement muted">Checking model agreement…</div>
@@ -24,8 +24,9 @@ function Agreement({ confidence }) {
   return (
     <div className="agreement">
       <div className="agreement-head">
-        Models’ high median {formatBoth(a.medianC)} → bucket{' '}
-        <span className="bucket">{a.bucketLabel}°F</span> (~{a.consensusC}°C) ·{' '}
+        Models’ high median {formatTemp(a.medianC, unit)} → bucket{' '}
+        <span className="bucket">{a.bucketLabel}°F</span>
+        {unit !== 'F' && ` (~${a.consensusC}°C)`} ·{' '}
         <strong className={`pct ${confidenceClass(a.pct)}`}>
           {a.agree}/{a.total} ({a.pct}%)
         </strong>
@@ -34,7 +35,7 @@ function Agreement({ confidence }) {
       <div className="agreement-sites">
         {a.sites.map((s) => (
           <span key={s.name} className={`vote ${s.agrees ? 'agree' : 'disagree'}`}>
-            {s.name} {formatBoth(s.highC)} <span className="hd-round">→ {s.roundedF}°F</span>
+            {s.name} {formatTemp(s.highC, unit)} <span className="hd-round">→ {s.roundedF}°F</span>
           </span>
         ))}
       </div>
@@ -43,7 +44,7 @@ function Agreement({ confidence }) {
 }
 
 // Selected hour: what each source said for that hour.
-function HourDetail({ card, models, reportsTenths }) {
+function HourDetail({ card, models, reportsTenths, unit }) {
   const time = card.time.slice(11, 16)
 
   if (card.observed) {
@@ -51,7 +52,7 @@ function HourDetail({ card, models, reportsTenths }) {
       <div className="hour-detail">
         <div className="hd-head">{time} — Observed (METAR)</div>
         <div className="hd-rows">
-          <span className="hd-row primary">METAR {formatBoth(card.tempC)}</span>
+          <span className="hd-row primary">METAR {formatTemp(card.tempC, unit)}</span>
         </div>
       </div>
     )
@@ -72,8 +73,9 @@ function HourDetail({ card, models, reportsTenths }) {
         {time} — by source
         {hourAgree && (
           <>
-            {' '}· median {formatBoth(hourAgree.medianC)} → bucket{' '}
-            <span className="bucket">{hourAgree.bucketLabel}°F</span> (~{hourAgree.consensusC}°C) ·{' '}
+            {' '}· median {formatTemp(hourAgree.medianC, unit)} → bucket{' '}
+            <span className="bucket">{hourAgree.bucketLabel}°F</span>
+            {unit !== 'F' && ` (~${hourAgree.consensusC}°C)`} ·{' '}
             <strong className={`pct ${confidenceClass(hourAgree.pct)}`}>
               {hourAgree.agree}/{hourAgree.total} ({hourAgree.pct}%)
             </strong>
@@ -87,7 +89,7 @@ function HourDetail({ card, models, reportsTenths }) {
               key={s.name}
               className={`hd-row ${s.agrees ? 'agree' : 'disagree'}${primaryNames.has(s.name) ? ' primary' : ''}`}
             >
-              {s.name} {formatBoth(s.highC)} <span className="hd-round">→ {s.roundedF}°F</span>
+              {s.name} {formatTemp(s.highC, unit)} <span className="hd-round">→ {s.roundedF}°F</span>
             </span>
           ))}
         </div>
@@ -101,7 +103,7 @@ function HourDetail({ card, models, reportsTenths }) {
   )
 }
 
-export default function HourlyStrip({ row, confidence, reportsTenths, selected, onSelect }) {
+export default function HourlyStrip({ row, confidence, reportsTenths, unit = 'both', selected, onSelect }) {
   const temps = row.hourly.map((h) => h.tempC).filter((n) => typeof n === 'number')
   const max = temps.length ? Math.max(...temps) : null
   const min = temps.length ? Math.min(...temps) : null
@@ -127,7 +129,7 @@ export default function HourlyStrip({ row, confidence, reportsTenths, selected, 
               className={`hour ${kind}${hot ? ' hot' : ''}${cold ? ' cold' : ''}${isSel ? ' selected' : ''}`}
             >
               <span className="hour-label">{h.time.slice(11, 16)}</span>
-              <span className="hour-temp">{h.tempC == null ? 'TBD' : formatBoth(h.tempC)}</span>
+              <span className="hour-temp">{h.tempC == null ? 'TBD' : formatTemp(h.tempC, unit)}</span>
               <span className="hour-tag">{kind}</span>
             </button>
           )
@@ -135,9 +137,9 @@ export default function HourlyStrip({ row, confidence, reportsTenths, selected, 
       </div>
 
       {selectedCard ? (
-        <HourDetail card={selectedCard} models={confidence?.models} reportsTenths={reportsTenths} />
+        <HourDetail card={selectedCard} models={confidence?.models} reportsTenths={reportsTenths} unit={unit} />
       ) : (
-        <Agreement confidence={confidence} />
+        <Agreement confidence={confidence} unit={unit} />
       )}
     </div>
   )

@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { formatBoth } from '../lib/units.js'
+import { formatTemp } from '../lib/units.js'
 import { useConfidence } from '../hooks/useConfidence.js'
 import HourlyStrip from './HourlyStrip.jsx'
 
 export default function StationRow({ row, confidenceDeps }) {
   const [open, setOpen] = useState(false)
+  // °F-market places (US, which report tenths) show °F only; others show both.
+  const unit = row.reportsTenths ? 'F' : 'both'
   const [selected, setSelected] = useState(null) // selected hour's time string
   const confidence = useConfidence(
     { lat: row.lat, lon: row.lon, metnoHighC: row.forecastHighC, reportsTenths: row.reportsTenths },
@@ -75,9 +77,9 @@ export default function StationRow({ row, confidenceDeps }) {
             </a>
           )}
           <span className="metric"><em>Local</em> {row.localTime}</span>
-          <span className="metric"><em>Now</em> {formatBoth(row.now.tempC)}</span>
-          <span className="metric"><em>High</em> {formatBoth(displayedHigh)}</span>
-          <span className="metric"><em>Tmrw</em> {formatBoth(row.tomorrowHighC)}</span>
+          <span className="metric"><em>Now</em> {formatTemp(row.now.tempC, unit)}</span>
+          <span className="metric"><em>High</em> {formatTemp(displayedHigh, unit)}</span>
+          <span className="metric"><em>Tmrw</em> {formatTemp(row.tomorrowHighC, unit)}</span>
           {!row.hasObs && <span className="badge">no station obs</span>}
         </div>
         {open && (
@@ -85,6 +87,7 @@ export default function StationRow({ row, confidenceDeps }) {
             row={row}
             confidence={confidence}
             reportsTenths={row.reportsTenths}
+            unit={unit}
             selected={selected}
             onSelect={(t) => setSelected((cur) => (cur === t ? null : t))}
           />

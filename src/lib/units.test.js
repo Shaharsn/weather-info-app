@@ -1,5 +1,20 @@
 import { describe, it, expect } from 'vitest'
-import { cToF, fToC, formatBoth } from './units.js'
+import { cToF, fToC, formatBoth, formatTemp } from './units.js'
+
+describe('formatTemp', () => {
+  it('shows both units by default', () => {
+    expect(formatTemp(30)).toBe('30.00°C / 86.00°F')
+  })
+  it('shows °F only for F-markets', () => {
+    expect(formatTemp(30, 'F')).toBe('86.00°F')
+  })
+  it('shows °C only when asked', () => {
+    expect(formatTemp(30, 'C')).toBe('30.00°C')
+  })
+  it('returns a dash for null', () => {
+    expect(formatTemp(null, 'F')).toBe('—')
+  })
+})
 
 describe('cToF', () => {
   it('converts 0C to 32F', () => expect(cToF(0)).toBe(32))

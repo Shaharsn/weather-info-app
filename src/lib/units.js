@@ -6,7 +6,16 @@ export function fToC(f) {
   return ((f - 32) * 5) / 9
 }
 
-export function formatBoth(c, decimals = 2) {
+// unit: 'both' (°C / °F), 'F' (°F only — for °F-resolved markets), or 'C'.
+export function formatTemp(c, unit = 'both', decimals = 2) {
   if (c === null || c === undefined || Number.isNaN(c)) return '—'
-  return `${c.toFixed(decimals)}°C / ${cToF(c).toFixed(decimals)}°F`
+  const cStr = `${c.toFixed(decimals)}°C`
+  const fStr = `${cToF(c).toFixed(decimals)}°F`
+  if (unit === 'F') return fStr
+  if (unit === 'C') return cStr
+  return `${cStr} / ${fStr}`
+}
+
+export function formatBoth(c, decimals = 2) {
+  return formatTemp(c, 'both', decimals)
 }
