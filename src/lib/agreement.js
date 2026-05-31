@@ -12,7 +12,9 @@ export function computeAgreement(sites) {
   const consensus =
     sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2)
 
-  const withAgree = scored.map((s) => ({ ...s, agrees: s.rounded === consensus }))
+  // "Agree" = within ±1°C of the consensus. Exact-degree matching is too strict
+  // for continuous model output (a tight 20–23° cluster would read as ~10%).
+  const withAgree = scored.map((s) => ({ ...s, agrees: Math.abs(s.rounded - consensus) <= 1 }))
   const agree = withAgree.filter((s) => s.agrees).length
   return {
     consensusC: consensus,

@@ -16,9 +16,7 @@ const MODELS = [
   { id: 'ukmo_seamless', name: 'UKMO (Met Office)' },
   { id: 'jma_seamless', name: 'JMA (Japan)' },
   { id: 'meteofrance_seamless', name: 'Météo-France' },
-  { id: 'kma_seamless', name: 'KMA (Korea)' },
   { id: 'cma_grapes_global', name: 'CMA (China)' },
-  { id: 'bom_access_global', name: 'BOM (Australia)' },
 ]
 
 // Pure: raw multi-model response -> [{ name, highC, hourly: { localTime: tempC } }]

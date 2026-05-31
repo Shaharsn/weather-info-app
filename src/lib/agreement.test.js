@@ -2,35 +2,35 @@ import { describe, it, expect } from 'vitest'
 import { computeAgreement } from './agreement.js'
 
 describe('computeAgreement', () => {
-  it('uses the rounded median as the consensus and counts agreement', () => {
+  it('uses the rounded median as the consensus and counts agreement within ±1°', () => {
     const sites = [
-      { name: 'ECMWF', highC: 25.1 },
+      { name: 'ECMWF', highC: 25.1 }, // 25
       { name: 'GFS', highC: 24.7 }, // 25
-      { name: 'ICON', highC: 24.4 }, // 24
+      { name: 'ICON', highC: 24.4 }, // 24 (within 1 of 25)
       { name: 'GEM', highC: 25.0 },
       { name: 'UKMO', highC: 25.2 },
-      { name: 'MET Norway', highC: 24.4 }, // 24
+      { name: 'MET Norway', highC: 22.0 }, // 22 -> 3 away, disagrees
     ]
     const a = computeAgreement(sites)
-    expect(a.consensusC).toBe(25) // median of [24,24,25,25,25,25]
-    expect(a.agree).toBe(4)
+    expect(a.consensusC).toBe(25) // median of [22,24,25,25,25,25]
+    expect(a.agree).toBe(5) // all but MET Norway (22) are within ±1 of 25
     expect(a.total).toBe(6)
-    expect(a.pct).toBe(67)
+    expect(a.pct).toBe(83)
   })
 
-  it('reports 100% when all sites agree', () => {
+  it('reports 100% when sites are within ±1° of consensus', () => {
     const a = computeAgreement([
-      { name: 'A', highC: 29 }, { name: 'B', highC: 29.4 }, { name: 'C', highC: 28.6 },
+      { name: 'A', highC: 23 }, { name: 'B', highC: 22.1 }, { name: 'C', highC: 23.4 },
     ])
-    expect(a.consensusC).toBe(29)
+    expect(a.consensusC).toBe(23)
     expect(a.pct).toBe(100)
   })
 
-  it('flags which sites agree with the consensus', () => {
+  it('marks a far-off site as disagreeing', () => {
     const a = computeAgreement([
-      { name: 'A', highC: 25 }, { name: 'B', highC: 25 }, { name: 'C', highC: 24 },
+      { name: 'A', highC: 25 }, { name: 'B', highC: 25 }, { name: 'C', highC: 20 },
     ])
-    expect(a.sites.find((s) => s.name === 'C').agrees).toBe(false)
+    expect(a.sites.find((s) => s.name === 'C').agrees).toBe(false) // 5 away
     expect(a.sites.find((s) => s.name === 'A').agrees).toBe(true)
   })
 
