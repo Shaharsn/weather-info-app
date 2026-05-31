@@ -18,10 +18,14 @@ export default function StationRow({ row, confidenceDeps }) {
     confidenceDeps,
   )
 
-  // Headline high = the observed peak so far folded with the forecast — the same
-  // basis Wunderground resolves on. (The multi-model spread/bucket stays in the
-  // expanded detail; it's a prediction aid, not what the market reads.)
-  const displayedHigh = row.todayHighC
+  // "High" is the OBSERVED running daily max — the exact thing Wunderground /
+  // Polymarket resolve on. The forecast is shown separately as a projection, so a
+  // forecast that overshoots the obs (e.g. models say 16 while it peaked at 14)
+  // is never presented as the high. Before any obs exist, fall back to forecast.
+  const observedHigh = row.observedHighC
+  const forecastHigh = row.forecastHighC
+  const displayedHigh = observedHigh ?? forecastHigh ?? row.todayHighC
+  const showForecastAside = observedHigh != null && forecastHigh != null
 
   const copyCity = (e) => {
     e.stopPropagation()
@@ -120,7 +124,19 @@ export default function StationRow({ row, confidenceDeps }) {
           )}
           <span className="metric"><em>Local</em> {row.localTime}</span>
           <span className="metric"><em>Now</em> {formatTemp(row.now.tempC, unit)}</span>
-          <span className="metric"><em>High</em> {formatTemp(displayedHigh, unit)}</span>
+          <span
+            className="metric"
+            title={
+              observedHigh != null
+                ? 'Observed high so far today — what the market resolves on'
+                : 'Forecast high (no observations yet today)'
+            }
+          >
+            <em>{observedHigh != null ? 'High' : 'High (fcst)'}</em> {formatTemp(displayedHigh, unit)}
+            {showForecastAside && (
+              <span className="fcst-high"> · fcst {formatTemp(forecastHigh, unit)}</span>
+            )}
+          </span>
         </div>
         {open && (
           <HourlyStrip

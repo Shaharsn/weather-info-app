@@ -62,6 +62,17 @@ describe('buildStationData', () => {
     expect(r.todayHighC).toBe(25) // beats fx.todayHighC (18)
   })
 
+  it('exposes the observed daytime peak (observedHighC) separately from the forecast', () => {
+    const hot = [...series, { obsTime: at(2026, 4, 28, 21, 30), tempC: 25 }] // 06:30 = 25
+    const r = buildStationData(station, hot, fx, nowEpoch)
+    expect(r.observedHighC).toBe(25) // what the market resolves on
+    expect(r.forecastHighC).toBe(18) // forecast kept separate, not folded in
+  })
+
+  it('observedHighC is null when there are no daytime observations', () => {
+    expect(buildStationData(station, [], fx, nowEpoch).observedHighC).toBeNull()
+  })
+
   it('keeps the hour PEAK, not the latest reading (the Lucknow 36→35 case)', () => {
     // Two obs in the same Seoul 06:00 hour: peak 26 at :30, then a cooler 24 at
     // :45 (latest). The high must keep the 26, not be dragged down to the 24.

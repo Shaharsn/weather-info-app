@@ -165,8 +165,9 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
     peakImminent, // 🔥 today's high is forecast for the next hour
     peakLocked, // ❄️ today's high already observed; rest of day forecast lower
     todayHighC,
+    observedHighC: observedMax, // the daytime observed peak SO FAR — what the market resolves on
     observedFloorC: maxDefined(now.tempC, observedMax), // high must never drop below this
-    forecastHighC: fx ? fx.todayHighC : null, // MET Norway's own high (a confidence vote)
+    forecastHighC: fx ? fx.todayHighC : null, // multi-model forecast high (a projection)
     tomorrowHighC: fx ? fx.tomorrowHighC : null,
     tomorrowLowC: fx ? fx.tomorrowLowC : null,
     hourly, hasObs, forecastMissing: !fx, error: null,

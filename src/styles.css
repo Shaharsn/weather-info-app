@@ -119,6 +119,7 @@ body {
 }
 .row-main .icao:hover { border-color: #3a6df0; color: #cdd9ff; }
 .row-main .metric { white-space: nowrap; }
+.row-main .fcst-high { color: var(--muted); font-weight: 400; font-size: 12px; }
 .row-main .metric em {
   font-style: normal; color: var(--muted); margin-right: 5px;
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
