@@ -126,7 +126,6 @@ export default function StationRow({ row, confidenceDeps, watchUntil = null, onT
           <span className="metric"><em>Local</em> {row.localTime}</span>
           <span className="metric"><em>Now</em> {formatTemp(row.now.tempC, unit)}</span>
           <span className="metric"><em>High</em> {formatTemp(displayedHigh, unit)}</span>
-          <span className="metric"><em>Tmrw</em> {formatTemp(row.tomorrowHighC, unit)}</span>
         </div>
         {open && (
           <HourlyStrip

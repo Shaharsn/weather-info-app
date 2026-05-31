@@ -162,7 +162,8 @@ export function useWeather(stations, deps = {}) {
         return buildStationData(s, obs, fxArr ? fxArr[i] ?? null : null, nowE)
       }),
     )
-    setLastUpdated(new Date())
+    // Deliberately NOT touching lastUpdated: this only refreshed the watched
+    // station(s), so "Updated" stays the time ALL stations were last refreshed.
   }, [stations, fetchMetar, fetchWu, nowEpoch, nowMs])
 
   // Tick every minute for the watched stations, and refresh immediately whenever
