@@ -137,6 +137,15 @@ describe('HourlyStrip', () => {
     expect(screen.queryByText(/°F/)).not.toBeInTheDocument()
   })
 
+  it('notes when observations already exceed the model median high', () => {
+    const confidence = {
+      status: 'ready',
+      agreement: { bucketLabel: null, consensusC: 21, medianC: 21, agree: 3, total: 8, pct: 38, sites: [] },
+    }
+    render(<HourlyStrip row={{ ...row, observedHighC: 22 }} confidence={confidence} unit="C" />)
+    expect(screen.getByText(/observed already 22.00°C/)).toBeInTheDocument()
+  })
+
   it('shows an unavailable note when confidence could not be computed', () => {
     render(<HourlyStrip row={row} confidence={{ status: 'unavailable', agreement: null }} />)
     expect(screen.getByText(/agreement unavailable/i)).toBeInTheDocument()

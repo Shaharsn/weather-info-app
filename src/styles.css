@@ -159,7 +159,8 @@ body {
 /* current hour with only a forecast so far — "on check" until the obs lands */
 .hour.pending { border-style: dashed; border-color: var(--warm-badge); background: rgba(255, 212, 121, 0.08); }
 .hour.pending .hour-temp { color: var(--warm-badge); }
-.hour .hour-wu { font-size: 11px; color: #6fc3c0; font-weight: 600; }
+.hour .hour-wu { font-size: 11px; color: #c08af0; font-weight: 600; } /* violet — distinct from observed-green */
+.agreement .obs-exceeds { color: var(--observed); font-weight: 600; }
 .hour .hour-label { font-weight: 650; }
 .hour .hour-temp { font-weight: 600; }
 .hour .hour-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); }

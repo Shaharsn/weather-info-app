@@ -26,7 +26,7 @@ function ConsensusTarget({ a, unit }) {
 }
 
 // Default view (no hour selected): the multi-model consensus for today's high.
-function Agreement({ confidence, unit }) {
+function Agreement({ confidence, unit, observedHighC }) {
   if (!confidence || confidence.status === 'idle') return null
   if (confidence.status === 'loading') {
     return <div className="agreement muted">Checking model agreement…</div>
@@ -35,6 +35,9 @@ function Agreement({ confidence, unit }) {
     return <div className="agreement muted">Model agreement unavailable right now. Click an hour for its sources.</div>
   }
   const a = confidence.agreement
+  // Observations have already overtaken the model forecast (models under-called the
+  // high) — say so, so the model median doesn't read as if it were the realized high.
+  const obsExceeds = observedHighC != null && observedHighC > a.medianC
   return (
     <div className="agreement">
       <div className="agreement-head">
@@ -42,6 +45,9 @@ function Agreement({ confidence, unit }) {
         <strong className={`pct ${confidenceClass(a.pct)}`}>
           {a.agree}/{a.total} ({a.pct}%)
         </strong>
+        {obsExceeds && (
+          <span className="obs-exceeds"> · observed already {formatTemp(observedHighC, unit)}</span>
+        )}
         <span className="hint"> · click an hour for its per-source values</span>
       </div>
       <div className="agreement-sites">
@@ -144,7 +150,7 @@ export default function HourlyStrip({ row, confidence, wuByHour, reportsTenths, 
       {selectedCard ? (
         <HourDetail card={selectedCard} models={confidence?.models} reportsTenths={reportsTenths} unit={unit} />
       ) : (
-        <Agreement confidence={confidence} unit={unit} />
+        <Agreement confidence={confidence} unit={unit} observedHighC={row.observedHighC} />
       )}
     </div>
   )
