@@ -78,14 +78,18 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
     (station.tz ? tzOffsetSeconds(station.tz, new Date(nowEpoch * 1000)) : 0)
   const today = localDateStr(nowEpoch, offset)
 
-  // Observed hours today, from real METAR history, snapped to the hour
-  // (keeping the latest observation within each hour).
+  // Observed hours today, from real METAR history, snapped to the hour. Keep the
+  // hour's PEAK reading (not just the latest): a station reporting every ~30 min
+  // can hit its daily high mid-hour (e.g. 36° at :30, 35° at the next :00), and
+  // keeping the latest would silently drop that peak from today's high.
   const obsByHour = new Map()
   for (const o of series) {
     if (localDateStr(o.obsTime, offset) !== today) continue
     const key = localHourStr(o.obsTime, offset)
     const prev = obsByHour.get(key)
-    if (!prev || o.obsTime > prev.obsTime) obsByHour.set(key, o)
+    if (!prev || o.tempC > prev.tempC || (o.tempC === prev.tempC && o.obsTime > prev.obsTime)) {
+      obsByHour.set(key, o)
+    }
   }
   const observedHours = [...obsByHour.entries()].map(([time, o]) => ({
     time, tempC: o.tempC, observed: true,

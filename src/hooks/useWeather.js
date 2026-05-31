@@ -10,7 +10,7 @@ import {
 
 // Refresh the current temp (METAR — free, observations update through the day)
 // often, but re-pull the forecast (MET Norway — must not be hammered) sparingly.
-const REFRESH_MS = 5 * 60 * 1000 // METAR cadence
+const REFRESH_MS = 2 * 60 * 1000 // METAR cadence (free/unthrottled — keep it fresh)
 const FORECAST_MIN_INTERVAL_MS = 25 * 60 * 1000 // don't auto-refetch forecast more often than this
 
 // Stable module-level defaults (defining inline would change load()'s identity

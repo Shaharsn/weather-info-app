@@ -62,6 +62,19 @@ describe('buildStationData', () => {
     expect(r.todayHighC).toBe(25) // beats fx.todayHighC (18)
   })
 
+  it('keeps the hour PEAK, not the latest reading (the Lucknow 36→35 case)', () => {
+    // Two obs in the same Seoul 06:00 hour: peak 26 at :30, then a cooler 24 at
+    // :45 (latest). The high must keep the 26, not be dragged down to the 24.
+    const intraHour = [
+      ...series,
+      { obsTime: at(2026, 4, 28, 21, 30), tempC: 26 }, // Seoul 06:30 — the peak
+      { obsTime: at(2026, 4, 28, 21, 45), tempC: 24 }, // Seoul 06:45 — latest, cooler
+    ]
+    const r = buildStationData(station, intraHour, fx, nowEpoch)
+    expect(r.todayHighC).toBe(26)
+    expect(r.hourly.find((h) => h.time === '2026-05-29T06:00').tempC).toBe(26)
+  })
+
   it('ignores an overnight/pre-dawn spike when computing the high', () => {
     // 30C at 02:00 Seoul (before 6am) must NOT become today's high.
     const spike = [...series, { obsTime: at(2026, 4, 28, 17, 0), tempC: 30 }] // Seoul 02:00
