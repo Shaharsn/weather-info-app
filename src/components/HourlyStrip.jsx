@@ -1,4 +1,4 @@
-import { formatBoth } from '../lib/units.js'
+import { formatBoth, fahrenheitBucket } from '../lib/units.js'
 import { computeAgreement } from '../lib/agreement.js'
 
 function obsTimeLabel(epochSec) {
@@ -25,7 +25,8 @@ function Agreement({ confidence }) {
     <div className="agreement">
       <div className="agreement-head">
         Models’ high median {formatBoth(a.medianC)} → likely METAR{' '}
-        <strong className="pct">{a.consensusC}°C</strong> ·{' '}
+        <strong className="pct">{a.consensusC}°C</strong>{' '}
+        <span className="bucket">≈ {fahrenheitBucket(a.consensusC)}°F bucket</span> ·{' '}
         <strong className={`pct ${confidenceClass(a.pct)}`}>
           {a.agree}/{a.total} ({a.pct}%)
         </strong>
@@ -73,6 +74,7 @@ function HourDetail({ card, models }) {
           <>
             {' '}· median {formatBoth(hourAgree.medianC)} → likely METAR{' '}
             <strong className={`pct ${confidenceClass(hourAgree.pct)}`}>{hourAgree.consensusC}°</strong>{' '}
+            <span className="bucket">≈ {fahrenheitBucket(hourAgree.consensusC)}°F</span>{' '}
             · {hourAgree.agree}/{hourAgree.total} ({hourAgree.pct}%)
           </>
         )}

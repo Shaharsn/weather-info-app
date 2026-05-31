@@ -168,6 +168,7 @@ body {
 .hour-detail .hd-note { margin-top: 6px; }
 
 .agreement-head .hint { color: var(--muted); font-weight: 400; }
+.bucket { color: #cdd9ff; font-weight: 650; background: rgba(58,109,240,0.15); padding: 1px 6px; border-radius: 5px; }
 .agreement { margin-top: 12px; font-size: 13px; }
 .agreement.muted { color: var(--muted); font-size: 12px; }
 .agreement-head { color: var(--muted); margin-bottom: 7px; }
