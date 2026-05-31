@@ -68,7 +68,7 @@ function HourDetail({ card, models }) {
         <div className="hd-rows">
           {rows.map((r) => (
             <span key={r.name} className={`hd-row${r.primary ? ' primary' : ''}`}>
-              {r.name} {formatBoth(r.tempC)}
+              {r.name} {formatBoth(r.tempC)} <span className="hd-round">→ {Math.round(r.tempC)}°</span>
             </span>
           ))}
         </div>

@@ -162,6 +162,7 @@ body {
   border: 1px solid var(--border); background: var(--panel-2);
 }
 .hour-detail .hd-row.primary { border-color: #3a6df0; color: #cdd9ff; }
+.hour-detail .hd-round { color: var(--observed); font-weight: 650; }
 .hour-detail .hd-note { margin-top: 6px; }
 
 .agreement-head .hint { color: var(--muted); font-weight: 400; }

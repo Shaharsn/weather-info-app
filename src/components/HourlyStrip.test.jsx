@@ -66,8 +66,9 @@ describe('HourlyStrip', () => {
     }
     render(<HourlyStrip row={row} confidence={confidence} selected="2026-05-29T18:00" />)
     expect(screen.getByText(/18:00 forecast — by source/)).toBeInTheDocument()
-    expect(screen.getByText('ECMWF 16.20°C / 61.16°F')).toBeInTheDocument()
-    expect(screen.getByText('MET Norway 16.00°C / 60.80°F')).toBeInTheDocument() // the displayed value
+    expect(screen.getByText(/ECMWF 16.20°C \/ 61.16°F/)).toBeInTheDocument()
+    expect(screen.getByText(/MET Norway 16.00°C \/ 60.80°F/)).toBeInTheDocument()
+    expect(screen.getAllByText('→ 16°').length).toBeGreaterThan(0) // rounded METAR integer shown
   })
 
   it('shows the METAR value for a selected observed hour', () => {
