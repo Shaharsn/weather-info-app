@@ -77,11 +77,15 @@ function HourDetail({ card, models }) {
       </div>
       {rows.length ? (
         <div className="hd-rows">
-          {rows.map((r) => (
-            <span key={r.name} className={`hd-row${r.primary ? ' primary' : ''}`}>
-              {r.name} {formatBoth(r.tempC)} <span className="hd-round">→ {Math.round(r.tempC)}°</span>
-            </span>
-          ))}
+          {rows.map((r) => {
+            const agrees = hourAgree ? Math.round(r.tempC) === hourAgree.consensusC : null
+            const cls = agrees === null ? '' : agrees ? ' agree' : ' disagree'
+            return (
+              <span key={r.name} className={`hd-row${cls}${r.primary ? ' primary' : ''}`}>
+                {r.name} {formatBoth(r.tempC)} <span className="hd-round">→ {Math.round(r.tempC)}°</span>
+              </span>
+            )
+          })}
         </div>
       ) : (
         <div className="muted">Per-source values unavailable (forecast service rate-limited).</div>

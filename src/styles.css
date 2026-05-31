@@ -161,8 +161,10 @@ body {
   font-size: 12px; padding: 3px 9px; border-radius: 6px;
   border: 1px solid var(--border); background: var(--panel-2);
 }
-.hour-detail .hd-row.primary { border-color: #3a6df0; color: #cdd9ff; }
-.hour-detail .hd-round { color: var(--observed); font-weight: 650; }
+.hour-detail .hd-row.agree { border-color: rgba(126, 224, 160, 0.5); color: var(--observed); }
+.hour-detail .hd-row.disagree { color: var(--muted); opacity: 0.7; }
+.hour-detail .hd-row.primary { border-color: #3a6df0; }
+.hour-detail .hd-round { font-weight: 650; }
 .hour-detail .hd-note { margin-top: 6px; }
 
 .agreement-head .hint { color: var(--muted); font-weight: 400; }

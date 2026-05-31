@@ -55,20 +55,25 @@ describe('HourlyStrip', () => {
     expect(onSelect).toHaveBeenCalledWith('2026-05-29T18:00')
   })
 
-  it('shows each source for a selected forecast hour', () => {
+  it('shows each source for a selected forecast hour, colored by agreement', () => {
     const confidence = {
       status: 'ready',
       models: [
-        { name: 'ECMWF', highC: 16.2, hourly: { '2026-05-29T18:00': 16.2 } },
-        { name: 'GFS', highC: 15.8, hourly: { '2026-05-29T18:00': 15.8 } },
+        { name: 'ECMWF', highC: 16.2, hourly: { '2026-05-29T18:00': 16.2 } }, // -> 16
+        { name: 'GFS', highC: 15.8, hourly: { '2026-05-29T18:00': 15.8 } }, // -> 16
+        { name: 'GEM', highC: 14.0, hourly: { '2026-05-29T18:00': 14.0 } }, // -> 14 (disagrees)
       ],
-      agreement: { consensusC: 16, agree: 2, total: 3, pct: 67, sites: [] },
+      agreement: { consensusC: 16, medianC: 16, agree: 2, total: 4, pct: 50, sites: [] },
     }
-    render(<HourlyStrip row={row} confidence={confidence} selected="2026-05-29T18:00" />)
+    const { container } = render(
+      <HourlyStrip row={row} confidence={confidence} selected="2026-05-29T18:00" />,
+    )
     expect(screen.getByText(/18:00 forecast — by source/)).toBeInTheDocument()
+    expect(screen.getByText(/most round to/)).toBeInTheDocument()
     expect(screen.getByText(/ECMWF 16.20°C \/ 61.16°F/)).toBeInTheDocument()
-    expect(screen.getByText(/MET Norway 16.00°C \/ 60.80°F/)).toBeInTheDocument()
-    expect(screen.getAllByText('→ 16°').length).toBeGreaterThan(0) // rounded METAR integer shown
+    // consensus at this hour is 16 (ECMWF, GFS, MET Norway round to 16); GEM (14) disagrees
+    expect(container.querySelectorAll('.hd-row.agree').length).toBe(3)
+    expect(container.querySelectorAll('.hd-row.disagree').length).toBe(1)
   })
 
   it('shows the METAR value for a selected observed hour', () => {
