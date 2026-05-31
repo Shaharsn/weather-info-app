@@ -50,6 +50,7 @@ export default function StationRow({ row, confidenceDeps }) {
           <span className="caret">{open ? '▾' : '▸'}</span>
           <span className="city">{row.city}</span>
           <span className="station-label">{row.stationLabel}</span>
+          {row.icao && <span className="icao" title="METAR / ICAO station code">{row.icao}</span>}
           <span className="metric"><em>Local</em> {row.localTime}</span>
           <span className="metric"><em>Now</em> {formatBoth(row.now.tempC)}</span>
           <span className="metric"><em>High</em> {formatBoth(displayedHigh)}</span>

@@ -1,10 +1,16 @@
 import { describe, it, expect } from 'vitest'
-import { cToF, formatBoth } from './units.js'
+import { cToF, fToC, formatBoth } from './units.js'
 
 describe('cToF', () => {
   it('converts 0C to 32F', () => expect(cToF(0)).toBe(32))
   it('converts 100C to 212F', () => expect(cToF(100)).toBe(212))
   it('converts 21C to ~69.8F', () => expect(cToF(21)).toBeCloseTo(69.8, 1))
+})
+
+describe('fToC', () => {
+  it('converts 32F to 0C', () => expect(fToC(32)).toBe(0))
+  it('converts 212F to 100C', () => expect(fToC(212)).toBe(100))
+  it('round-trips with cToF', () => expect(fToC(cToF(21))).toBeCloseTo(21, 6))
 })
 
 describe('formatBoth', () => {

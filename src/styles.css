@@ -52,6 +52,30 @@ body {
   transition: background 0.15s, border-color 0.15s;
 }
 .controls button:hover { background: #232c3b; border-color: #33405a; }
+.controls .icon-btn { padding: 6px 9px; font-size: 15px; line-height: 1; }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.modal {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 18px; width: min(320px, 92vw); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.modal-close {
+  background: none; border: none; color: var(--muted); font-size: 22px;
+  line-height: 1; cursor: pointer; padding: 0 4px;
+}
+.modal-close:hover { color: var(--text); }
+.conv-row { display: flex; align-items: center; gap: 12px; }
+.conv-row span { width: 28px; font-weight: 650; }
+.conv-row input {
+  flex: 1; padding: 9px 12px; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--panel-2); color: inherit; font-size: 15px;
+}
+.conv-row input:focus { outline: none; border-color: #3a6df0; box-shadow: 0 0 0 3px rgba(58,109,240,0.18); }
+.conv-eq { text-align: center; color: var(--muted); font-size: 18px; margin: 8px 0; }
 
 .notice { padding: 8px 4px; font-size: 14px; }
 .notice.error { color: var(--hot); }
@@ -75,6 +99,12 @@ body {
 .row-main .caret { width: 12px; color: var(--muted); }
 .row-main .city { font-weight: 650; min-width: 120px; }
 .row-main .station-label { color: var(--muted); flex: 1; }
+.row-main .icao {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px; letter-spacing: 0.5px; color: #aeb9d0;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+  padding: 1px 6px; border-radius: 5px;
+}
 .row-main .metric { white-space: nowrap; }
 .row-main .metric em {
   font-style: normal; color: var(--muted); margin-right: 5px;

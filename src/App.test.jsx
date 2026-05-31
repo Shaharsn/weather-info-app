@@ -50,4 +50,12 @@ describe('App', () => {
     fireEvent.change(search, { target: { value: 'zzzzz' } })
     expect(screen.getByText(/No places match/i)).toBeInTheDocument()
   })
+
+  it('opens the temperature converter from the header', () => {
+    render(<App />)
+    expect(screen.queryByLabelText('Celsius')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText(/open temperature converter/i))
+    expect(screen.getByLabelText('Celsius')).toBeInTheDocument()
+    expect(screen.getByLabelText('Fahrenheit')).toBeInTheDocument()
+  })
 })

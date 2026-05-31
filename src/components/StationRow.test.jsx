@@ -19,6 +19,10 @@ describe('StationRow', () => {
     expect(screen.getByText('12.40°C / 54.32°F')).toBeInTheDocument() // now
     expect(screen.getByText('18.00°C / 64.40°F')).toBeInTheDocument() // today high
   })
+  it('shows the METAR/ICAO code', () => {
+    render(<StationRow row={base} />)
+    expect(screen.getByText('RKSI')).toBeInTheDocument()
+  })
   it('shows a peak-hours clock only when isPeakHour is set', () => {
     const { rerender, container } = render(<StationRow row={base} />)
     expect(container.querySelector('.peak')).toBeNull()
