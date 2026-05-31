@@ -38,19 +38,22 @@ export function parseMetarSeries(rawArray) {
 }
 
 // Fetch the last `hours` of observations for each station. The aviationweather
-// endpoint caps a batched response at ~400 records total, which would truncate
-// history when many stations are requested at once — so fetch in small chunks
-// (each well under the cap) and merge.
+// endpoint caps a batched response at ~400 records total, so we fetch in small
+// chunks. Chunks run SEQUENTIALLY and each is independently fault-tolerant: a
+// failed chunk is skipped (those stations fall back to forecast) instead of
+// wiping every station's observations.
 export async function fetchMetarSeries(icaos, hours = 30) {
   if (icaos.length === 0) return {}
   const CHUNK = 6
-  const chunks = []
-  for (let i = 0; i < icaos.length; i += CHUNK) chunks.push(icaos.slice(i, i + CHUNK))
-  const maps = await Promise.all(
-    chunks.map(async (group) => {
+  const out = {}
+  for (let i = 0; i < icaos.length; i += CHUNK) {
+    const group = icaos.slice(i, i + CHUNK)
+    try {
       const url = `${METAR_URL}?ids=${group.join(',')}&format=json&hours=${hours}`
-      return parseMetarSeries(await fetchJson(url))
-    }),
-  )
-  return Object.assign({}, ...maps)
+      Object.assign(out, parseMetarSeries(await fetchJson(url)))
+    } catch {
+      /* skip this chunk; the rest still load */
+    }
+  }
+  return out
 }

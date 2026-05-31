@@ -52,7 +52,12 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
   // Does this station report sub-degree (0.1°C) temps? US stations do; many
   // others report only whole °C. This decides how the °F bucket is rounded:
   // whole-°C stations can only land on even-ish °F (so 86–87°F = exactly 30°C).
-  const reportsTenths = series.length ? series.some((o) => !Number.isInteger(o.tempC)) : true
+  const reportsTenths =
+    typeof station.reportsTenths === 'boolean'
+      ? station.reportsTenths
+      : series.length
+        ? series.some((o) => !Number.isInteger(o.tempC))
+        : true
 
   // Most recent observation (robust to unsorted input, though series is sorted).
   const latest = series.length ? series.reduce((a, b) => (b.obsTime > a.obsTime ? b : a)) : null

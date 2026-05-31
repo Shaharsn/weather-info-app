@@ -18,7 +18,10 @@ export const STATIONS = [
   { city: 'Miami', stationLabel: 'Miami Intl Airport', icao: 'KMIA', lat: 25.793, lon: -80.290, tz: 'America/New_York' },
   { city: 'Singapore', stationLabel: 'Changi Airport', icao: 'WSSS', lat: 1.359, lon: 103.989, tz: 'Asia/Singapore' },
   { city: 'Tokyo', stationLabel: 'Haneda Airport', icao: 'RJTT', lat: 35.552, lon: 139.780, tz: 'Asia/Tokyo' },
-  { city: 'Shenzhen', stationLabel: "Bao'an Intl Airport", icao: 'ZGSZ', lat: 22.639, lon: 113.811, tz: 'Asia/Shanghai', resolveNote: "Wunderground/Polymarket resolve this on 'Lau Fau Shan' (Hong Kong), ~2°C cooler — bid on WU's number, NOT this airport's." },
+  // WU/Polymarket resolve "Shenzhen ZGSZ" on the Lau Fau Shan (HK) station, NOT the
+  // airport — so we forecast Lau Fau Shan's coords. No METAR there (not an airport),
+  // so this row is forecast-only. Whole-°C region → reportsTenths:false.
+  { city: 'Shenzhen', stationLabel: "Lau Fau Shan, HK (WU's 'Shenzhen')", icao: null, lat: 22.469, lon: 113.983, tz: 'Asia/Hong_Kong', reportsTenths: false, resolveNote: "WU/Polymarket resolve 'Shenzhen' on the Lau Fau Shan (Hong Kong) station, ~2° cooler than Bao'an airport. This row forecasts Lau Fau Shan — the value the market actually uses." },
   { city: 'Amsterdam', stationLabel: 'Schiphol Airport', icao: 'EHAM', lat: 52.309, lon: 4.764, tz: 'Europe/Amsterdam' },
   { city: 'Wellington', stationLabel: 'Wellington Intl Airport', icao: 'NZWN', lat: -41.327, lon: 174.805, tz: 'Pacific/Auckland' },
   { city: 'Madrid', stationLabel: 'Adolfo Suárez Barajas', icao: 'LEMD', lat: 40.472, lon: -3.561, tz: 'Europe/Madrid' },
