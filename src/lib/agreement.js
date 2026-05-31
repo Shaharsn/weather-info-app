@@ -1,4 +1,4 @@
-import { cToF, fToC } from './units.js'
+import { cToF } from './units.js'
 
 // Even-°F start of the 2°F Polymarket bucket containing whole-°F value f
 // (…, 84–85, 86–87, 88–89, …).
@@ -53,14 +53,14 @@ export function computeAgreement(sites, reportsTenths = true) {
   const m = Math.floor(sc.length / 2)
   const medianC = sc.length % 2 ? sc[m] : (sc[m - 1] + sc[m]) / 2
 
-  // °C reference, derived from the consensus bucket so it stays consistent with
-  // it (e.g. 86–87°F ↔ 30°C). For °C-resolved (European) markets this is the value.
-  const consensusC = Math.round(fToC(bucketLowF))
+  // °C reference = the rounded median high (the honest whole-°C value; for
+  // °C-resolved European markets this is what resolves).
+  const consensusC = Math.round(medianC)
 
   return {
     bucketLowF,
     bucketLabel: `${bucketLowF}–${bucketLowF + 1}`, // °F bucket (the bid target)
-    consensusC, // °C reference (matches the bucket)
+    consensusC, // °C reference
     medianC,
     agree,
     total: withAgree.length,
