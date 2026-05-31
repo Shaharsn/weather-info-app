@@ -9,8 +9,10 @@ import {
 
 // Lazily get the multi-model ensemble for ONE station (only once the row is
 // expanded) and compute the consensus high + agreement. Uses a short browser
-// cache so re-expanding a city or reloading doesn't re-hit Open-Meteo.
-// target: { lat, lon, metnoHighC (MET Norway's own high, counted as a site) }
+// cache so re-expanding a city or reloading doesn't re-hit Open-Meteo. These are
+// the same models the row's headline forecast is the median of, so the panel and
+// the headline never disagree.
+// target: { lat, lon, reportsTenths }
 export function useConfidence(target, enabled, deps = {}) {
   const fetchEnsemble = deps.fetchStationEnsemble ?? defaultFetch
   const fetchNws = deps.fetchNwsForecast ?? defaultFetchNws
@@ -26,8 +28,7 @@ export function useConfidence(target, enabled, deps = {}) {
     let cancelled = false
 
     const settle = (models) => {
-      const sites = [...models, { name: 'MET Norway', highC: target.metnoHighC }]
-      const agreement = computeAgreement(sites, target.reportsTenths)
+      const agreement = computeAgreement(models, target.reportsTenths)
       if (!cancelled) setState({ status: agreement ? 'ready' : 'unavailable', agreement, models })
     }
 

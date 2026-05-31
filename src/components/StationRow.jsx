@@ -13,7 +13,7 @@ export default function StationRow({ row, confidenceDeps }) {
   const hoursToday = row.localTime ? Number(row.localTime.slice(0, 2)) + 1 : 12
   const [selected, setSelected] = useState(null) // selected hour's time string
   const confidence = useConfidence(
-    { lat: row.lat, lon: row.lon, metnoHighC: row.forecastHighC, reportsTenths: row.reportsTenths },
+    { lat: row.lat, lon: row.lon, reportsTenths: row.reportsTenths },
     open,
     confidenceDeps,
   )

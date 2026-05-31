@@ -34,23 +34,24 @@ describe('useConfidence', () => {
       }),
     )
     await waitFor(() => expect(result.current.status).toBe('ready'))
-    expect(result.current.agreement.consensusC).toBe(29) // mode of 29,28,29,29
-    expect(result.current.agreement.agree).toBe(3) // ECMWF, ICON, MET Norway say 29
+    expect(result.current.agreement.consensusC).toBe(29) // median of 29.1, 28.4, 29.0
+    expect(result.current.agreement.agree).toBe(2) // ECMWF, ICON share the leading bucket
+    expect(result.current.agreement.total).toBe(3) // three models, no injected MET Norway
     expect(result.current.models).toEqual(models)
     expect(writeEnsembleCache).toHaveBeenCalledWith(51.5, 0.05, models, expect.any(Number))
   })
 
-  it('still gives a second source via NWS when the Open-Meteo ensemble fails', async () => {
-    const fetchStationEnsemble = vi.fn().mockResolvedValue([]) // rate-limited -> empty
+  it('includes NWS as an extra source alongside the ensemble', async () => {
+    const ensemble = [{ name: 'GFS', highC: 29.5, hourly: {} }]
     const nws = { name: 'NWS (US)', highC: 30, hourly: { '2026-05-30T15:00': 30 } }
     const { result } = renderHook(() =>
       useConfidence(target, true, {
-        fetchStationEnsemble, ...base, fetchNwsForecast: () => Promise.resolve(nws),
+        fetchStationEnsemble: () => Promise.resolve(ensemble), ...base,
+        fetchNwsForecast: () => Promise.resolve(nws),
       }),
     )
     await waitFor(() => expect(result.current.status).toBe('ready'))
-    // sites: NWS 30 + MET Norway 29.2(->29) -> consensus is the rounded median
-    expect(result.current.models).toEqual([nws])
+    expect(result.current.models).toEqual([...ensemble, nws])
     expect(result.current.agreement.total).toBe(2)
   })
 

@@ -47,11 +47,15 @@ export function useWeather(stations, deps = {}) {
         const wuStations = stations.filter((s) => s.wuLocationId)
         const needForecast = force || !fx.current.arr || nowMs() - fx.current.at > FORECAST_MIN_INTERVAL_MS
 
-        const [metarMap, live, wuByCity] = await Promise.all([
+        // Kick off all fetches; the (heavier, ~10s) multi-model forecast runs in
+        // the background so it doesn't hold up the observations.
+        const fxPromise = needForecast
+          ? fetchForecast(stations).catch(() => null)
+          : Promise.resolve(undefined)
+        const [metarMap, wuByCity] = await Promise.all([
           fetchMetar(icaos, 30).catch(() => ({})),
-          needForecast ? fetchForecast(stations).catch(() => null) : Promise.resolve(undefined),
-          // Observations for non-METAR stations (e.g. Shenzhen → Lau Fau Shan), keyed by city.
           Promise.all(
+            // Observations for non-METAR stations (e.g. Shenzhen → Lau Fau Shan), keyed by city.
             wuStations.map((s) =>
               fetchWu(s.wuLocationId, s.tz, nowMs())
                 .then((series) => [s.city, series])
@@ -60,30 +64,41 @@ export function useWeather(stations, deps = {}) {
           ).then(Object.fromEntries),
         ])
 
-        if (needForecast) {
-          if (live) {
-            writeCache(live, nowMs())
-            fx.current = { arr: live, at: nowMs(), staleSince: null }
-          } else {
-            const cached = readCache(nowMs())
-            if (cached) {
-              fx.current = { arr: cached.fxArr, at: cached.savedAt, staleSince: new Date(cached.savedAt) }
-            } else {
-              fx.current = { arr: null, at: 0, staleSince: null }
-            }
-          }
+        const buildAndSet = () => {
+          const fxArr = fx.current.arr
+          const now = nowEpoch()
+          setRows(
+            stations.map((s, i) => {
+              const obs = s.wuLocationId ? wuByCity[s.city] : s.icao ? metarMap[s.icao] : undefined
+              return buildStationData(s, obs, fxArr ? fxArr[i] ?? null : null, now)
+            }),
+          )
+          setLastUpdated(new Date())
         }
 
-        const fxArr = fx.current.arr
-        const now = nowEpoch()
-        const built = stations.map((s, i) => {
-          const obs = s.wuLocationId ? wuByCity[s.city] : s.icao ? metarMap[s.icao] : undefined
-          return buildStationData(s, obs, fxArr ? fxArr[i] ?? null : null, now)
-        })
-        setRows(built)
-        setForecastError(!fxArr)
+        // Paint observations now (reusing whatever forecast we already have), so
+        // the first load isn't blank while the forecast downloads.
+        buildAndSet()
+        if (!needForecast) {
+          setForecastError(!fx.current.arr)
+          setForecastStaleSince(fx.current.staleSince)
+          setStatus('ready')
+          return
+        }
+
+        const live = await fxPromise
+        if (live) {
+          writeCache(live, nowMs())
+          fx.current = { arr: live, at: nowMs(), staleSince: null }
+        } else {
+          const cached = readCache(nowMs())
+          fx.current = cached
+            ? { arr: cached.fxArr, at: cached.savedAt, staleSince: new Date(cached.savedAt) }
+            : { arr: null, at: 0, staleSince: null }
+        }
+        buildAndSet() // repaint with the fresh (or cached) forecast
+        setForecastError(!fx.current.arr)
         setForecastStaleSince(fx.current.staleSince)
-        setLastUpdated(new Date())
         setStatus('ready')
       } catch (e) {
         setStatus('error')

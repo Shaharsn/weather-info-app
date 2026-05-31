@@ -1,7 +1,15 @@
 import { fetchJson } from './http.js'
 import { fetchMetnoForecast } from './metno.js'
+import { MODELS } from './ensemble.js'
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
+
+const median = (nums) => {
+  const v = nums.filter((x) => typeof x === 'number').sort((a, b) => a - b)
+  if (!v.length) return null
+  const m = Math.floor(v.length / 2)
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2
+}
 // Open-Meteo model, chosen by the backtest (run 2026-05-30, MAE 0.659C vs ERA5).
 // Used only as a fallback now; MET Norway is the primary source (see fetchForecast).
 export const FORECAST_MODEL = 'ecmwf_ifs025'
@@ -43,12 +51,64 @@ export async function fetchOpenMeteoForecast(stations) {
 
 // Forecast for all stations. MET Norway is primary (free, no key, not per-IP
 // rate-limited, ~1C from METAR in testing); Open-Meteo is the fallback. A thrown
-// error propagates to the caller, which then uses the cached forecast.
+// Pure: raw multi-model Open-Meteo response -> same shape as parseForecast, but
+// every value is the MEDIAN across the models that returned data — so the row's
+// "now", today/tomorrow highs, and hourly curve are a multi-model consensus, not
+// a single model. (Matches the per-model consensus shown when a row is expanded.)
+export function parseMultiModelForecast(raw) {
+  const arr = Array.isArray(raw) ? raw : [raw]
+  const ids = MODELS.map((m) => m.id)
+  return arr.map((loc) => {
+    const times = loc.hourly?.time ?? []
+    const series = ids.map((id) => loc.hourly?.[`temperature_2m_${id}`]).filter(Array.isArray)
+    const hourly = times
+      .map((t, i) => ({ time: t, tempC: median(series.map((s) => s[i])) }))
+      .filter((h) => h.tempC != null)
+    const dayMedian = (field, idx) => median(ids.map((id) => loc.daily?.[`${field}_${id}`]?.[idx]))
+    return {
+      utcOffsetSeconds: loc.utc_offset_seconds,
+      currentC: median(ids.map((id) => loc.current?.[`temperature_2m_${id}`])),
+      todayHighC: dayMedian('temperature_2m_max', 0),
+      tomorrowHighC: dayMedian('temperature_2m_max', 1),
+      tomorrowLowC: dayMedian('temperature_2m_min', 1),
+      hourly,
+    }
+  })
+}
+
+// Multi-model consensus for all stations in ONE batched Open-Meteo request.
+export async function fetchMultiModelForecast(stations) {
+  if (stations.length === 0) return []
+  const params = new URLSearchParams({
+    latitude: stations.map((s) => s.lat).join(','),
+    longitude: stations.map((s) => s.lon).join(','),
+    current: 'temperature_2m',
+    hourly: 'temperature_2m',
+    daily: 'temperature_2m_max,temperature_2m_min',
+    forecast_days: '2',
+    timezone: 'auto',
+    models: MODELS.map((m) => m.id).join(','),
+  })
+  // 8 models × all stations × hourly is a big response (~10s), so allow more
+  // time than the default — otherwise it would clip and fall back to one model.
+  return parseMultiModelForecast(await fetchJson(`${FORECAST_URL}?${params}`, { timeoutMs: 30000 }))
+}
+
+// Forecast for all stations. Primary = the multi-model median (one batched
+// Open-Meteo call), so what's shown is a consensus rather than any single model.
+// MET Norway, then a single Open-Meteo model, are fallbacks if that call fails.
+// A thrown error propagates to the caller, which then uses the cached forecast.
 export async function fetchForecast(stations) {
   if (stations.length === 0) return []
   try {
-    return await fetchMetnoForecast(stations)
+    const fx = await fetchMultiModelForecast(stations)
+    if (fx.some((f) => typeof f.todayHighC === 'number')) return fx
+    throw new Error('multi-model returned no highs')
   } catch {
-    return await fetchOpenMeteoForecast(stations)
+    try {
+      return await fetchMetnoForecast(stations)
+    } catch {
+      return await fetchOpenMeteoForecast(stations)
+    }
   }
 }

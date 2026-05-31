@@ -8,7 +8,7 @@ import { fetchJson } from './http.js'
 // a given location (or return no data) are dropped per-location by parseEnsemble.
 // UKMO is the UK Met Office's model; these are the same models sites like
 // AccuWeather / Wunderground blend.
-const MODELS = [
+export const MODELS = [
   { id: 'ecmwf_ifs025', name: 'ECMWF' },
   { id: 'gfs_seamless', name: 'GFS (NOAA)' },
   { id: 'icon_seamless', name: 'ICON (DWD)' },
