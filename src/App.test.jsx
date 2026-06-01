@@ -15,6 +15,8 @@ vi.mock('./hooks/useWeather.js', () => ({
     forecastError: false,
     forecastStaleSince: null,
     refresh: vi.fn(),
+    notifyCities: new Set(),
+    toggleNotify: vi.fn(),
     // Seoul earlier local time than London, but later alphabetically — so a
     // local-time sort flips them vs an alphabetical one.
     rows: [mkRow('Seoul', 'Incheon Intl Airport', '09:00'), mkRow('London', 'London City Airport', '20:00')],

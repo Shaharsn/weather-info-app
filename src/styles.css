@@ -131,7 +131,21 @@ body {
   flex: 0 0 22px; display: flex; flex-direction: column; align-items: center;
   gap: 2px; padding-top: 9px;
 }
-.peak, .peak-flag { cursor: help; font-size: 14px; line-height: 1; }
+.peak-flag { cursor: help; font-size: 14px; line-height: 1; }
+.watch-btn {
+  cursor: pointer; font-size: 14px; line-height: 1; position: relative;
+  background: none; border: 1px solid transparent; border-radius: 8px;
+  padding: 2px 3px; opacity: 0.4; filter: grayscale(1);
+  transition: opacity 0.15s, filter 0.15s;
+}
+.watch-btn:hover { opacity: 0.9; filter: grayscale(0); }
+.watch-btn:focus-visible { outline: 2px solid #3a6df0; outline-offset: 1px; }
+.watch-btn.peak { opacity: 1; filter: none; } /* peak-heat hours */
+.watch-btn.notifying {
+  opacity: 1; filter: none;
+  border-color: #3a6df0; background: rgba(58, 109, 240, 0.16);
+}
+.watch-btn .notify-dot { position: absolute; top: -6px; right: -5px; font-size: 9px; }
 .warn-badge { cursor: help; font-size: 14px; }
 
 .badge {

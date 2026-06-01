@@ -54,11 +54,24 @@ describe('StationRow', () => {
     expect(writeText).toHaveBeenCalledWith('Seoul')
     vi.unstubAllGlobals()
   })
-  it('shows a peak-hours clock only when isPeakHour is set', () => {
+  it('tints the clock during peak-heat hours', () => {
     const { rerender, container } = render(<StationRow row={base} />)
-    expect(container.querySelector('.peak')).toBeNull()
+    expect(container.querySelector('.watch-btn.peak')).toBeNull()
     rerender(<StationRow row={{ ...base, isPeakHour: true }} />)
-    expect(container.querySelector('.peak')).toBeInTheDocument()
+    expect(container.querySelector('.watch-btn.peak')).toBeInTheDocument()
+  })
+
+  it('clicking the clock toggles notifications (and does not expand the row)', () => {
+    const onToggleNotify = vi.fn()
+    const { container } = render(<StationRow row={base} onToggleNotify={onToggleNotify} />)
+    fireEvent.click(container.querySelector('.watch-btn'))
+    expect(onToggleNotify).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('06:00')).not.toBeInTheDocument() // row stayed collapsed
+  })
+
+  it('shows the notifying state when isNotified', () => {
+    const { container } = render(<StationRow row={base} isNotified />)
+    expect(container.querySelector('.watch-btn.notifying')).toBeInTheDocument()
   })
 
   it('shows 🔥 when peakImminent and ❄️ when peakLocked', () => {

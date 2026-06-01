@@ -3,10 +3,25 @@ import { fetchMetarSeries as defaultFetchMetar } from '../api/metar.js'
 import { fetchForecast as defaultFetchForecast } from '../api/forecast.js'
 import { fetchWuSeries as defaultFetchWu } from '../api/wunderground.js'
 import { buildStationData } from '../lib/merge.js'
+import { formatTemp } from '../lib/units.js'
+import {
+  notify as defaultNotify,
+  requestNotifyPermission as defaultRequestPermission,
+} from '../lib/notify.js'
 import {
   readForecastCache as defaultReadCache,
   writeForecastCache as defaultWriteCache,
 } from '../lib/forecastCache.js'
+
+// Cities the user has asked to be notified about, persisted across reloads.
+const NOTIFY_KEY = 'weather-notify-cities'
+function readNotifyCities() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(NOTIFY_KEY) || '[]'))
+  } catch {
+    return new Set()
+  }
+}
 
 // Refresh the current temp (METAR — free, unthrottled) every minute, but re-pull
 // the forecast (MET Norway — 44 requests/pull, republished only a few times a day)
@@ -27,6 +42,8 @@ export function useWeather(stations, deps = {}) {
   const nowMs = deps.nowMs ?? defaultNowMs
   const readCache = deps.readForecastCache ?? defaultReadCache
   const writeCache = deps.writeForecastCache ?? defaultWriteCache
+  const notify = deps.notify ?? defaultNotify
+  const requestPermission = deps.requestNotifyPermission ?? defaultRequestPermission
 
   const [rows, setRows] = useState([])
   const [status, setStatus] = useState('loading') // loading | ready | error
@@ -36,6 +53,14 @@ export function useWeather(stations, deps = {}) {
   const timer = useRef(null)
   // Last forecast we're using, so METAR-only refreshes can reuse it.
   const fx = useRef({ arr: null, at: 0, staleSince: null })
+  // Per-station notification opt-in: click a city's clock to be alerted on each
+  // new observation for it (while a tab is open).
+  const [notifyCities, setNotifyCities] = useState(() =>
+    deps.initialNotifyCities ? new Set(deps.initialNotifyCities) : readNotifyCities(),
+  )
+  const rowsRef = useRef(rows)
+  rowsRef.current = rows
+  const notifiedObs = useRef({}) // city -> last obsTime we've already notified about
 
   // force=true (manual refresh / first load) always re-pulls the forecast;
   // the periodic METAR tick only re-pulls it once it's older than the min interval.
@@ -113,5 +138,58 @@ export function useWeather(stations, deps = {}) {
     return () => clearInterval(timer.current)
   }, [load])
 
-  return { rows, status, lastUpdated, forecastError, forecastStaleSince, refresh: () => load(true) }
+  // Toggle notifications for a city. Turning it on asks permission (once) and
+  // baselines the current observation, so we only fire on FUTURE ones.
+  const toggleNotify = useCallback(
+    (city) => {
+      setNotifyCities((prev) => {
+        const next = new Set(prev)
+        if (next.has(city)) {
+          next.delete(city)
+        } else {
+          next.add(city)
+          requestPermission()
+          const row = rowsRef.current.find((r) => r.city === city)
+          notifiedObs.current[city] = row?.now?.obsTime ?? 0
+        }
+        return next
+      })
+    },
+    [requestPermission],
+  )
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(NOTIFY_KEY, JSON.stringify([...notifyCities]))
+    } catch {
+      /* ignore storage errors */
+    }
+  }, [notifyCities])
+
+  // When a watched city gets a newer observation than we last announced, notify.
+  useEffect(() => {
+    for (const city of notifyCities) {
+      const row = rows.find((r) => r.city === city)
+      if (!row || !row.hasObs || row.now?.obsTime == null) continue
+      const last = notifiedObs.current[city]
+      if (last == null) {
+        notifiedObs.current[city] = row.now.obsTime // first sighting: baseline, don't fire
+        continue
+      }
+      if (row.now.obsTime > last) {
+        notifiedObs.current[city] = row.now.obsTime
+        const unit = row.reportsTenths ? 'F' : 'C'
+        const high = row.observedHighC ?? row.now.tempC
+        notify(
+          `${row.city}: now ${formatTemp(row.now.tempC, unit)}`,
+          `New observation · today's high ${formatTemp(high, unit)}`,
+        )
+      }
+    }
+  }, [rows, notifyCities, notify])
+
+  return {
+    rows, status, lastUpdated, forecastError, forecastStaleSince,
+    refresh: () => load(true), notifyCities, toggleNotify,
+  }
 }

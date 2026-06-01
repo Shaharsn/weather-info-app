@@ -4,7 +4,7 @@ import { useConfidence } from '../hooks/useConfidence.js'
 import { useWunderground } from '../hooks/useWunderground.js'
 import HourlyStrip from './HourlyStrip.jsx'
 
-export default function StationRow({ row, confidenceDeps, wunderDeps }) {
+export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified = false, onToggleNotify }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   // Show only the unit the market resolves in: °F for US (tenths) stations,
@@ -41,13 +41,29 @@ export default function StationRow({ row, confidenceDeps, wunderDeps }) {
     )
   }
 
-  // Gutter to the LEFT of the card: peak-window clock, plus status flags for
-  // "high coming next hour" (🔥) and "high already in, rest cooler" (❄️).
+  // Gutter to the LEFT of the card: a clock you click to get notified on each new
+  // observation for this city; plus status flags for "high coming next hour" (🔥)
+  // and "high already in, rest cooler" (❄️).
   const marker = (
     <div className="peak-marker">
-      {row.isPeakHour && (
-        <span className="peak" title="Peak-heat hours (~2–6pm local) — near today's high">🕒</span>
-      )}
+      <button
+        type="button"
+        className={`watch-btn${isNotified ? ' notifying' : ''}${row.isPeakHour ? ' peak' : ''}`}
+        aria-pressed={isNotified}
+        title={
+          isNotified
+            ? 'Notifying on each new observation for this city. Click to stop.'
+            : 'Click to get a notification on each new observation for this city' +
+              (row.isPeakHour ? ' (peak-heat hours now)' : '')
+        }
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleNotify?.()
+        }}
+      >
+        🕒
+        {isNotified && <span className="notify-dot">🔔</span>}
+      </button>
       {row.peakImminent && (
         <span className="peak-flag" title="Today's high is forecast for the next hour — peaking soon">
           🔥

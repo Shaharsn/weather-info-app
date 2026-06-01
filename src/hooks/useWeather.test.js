@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useWeather } from './useWeather.js'
+
+beforeEach(() => localStorage.clear()) // notify-cities persist there; isolate tests
 
 const stations = [
   { city: 'Seoul', stationLabel: 'Incheon', icao: 'RKSI', lat: 37.5, lon: 126.5 },
@@ -92,6 +94,38 @@ describe('useWeather', () => {
     expect(result.current.forecastStaleSince).toBeInstanceOf(Date)
     expect(result.current.rows[0].forecastMissing).toBe(false) // forecast present from cache
     expect(result.current.rows[0].todayHighC).toBe(25)
+  })
+
+  it('toggleNotify adds/removes a city and asks permission on enable', async () => {
+    const deps = makeDeps()
+    const requestNotifyPermission = vi.fn()
+    const { result } = renderHook(() =>
+      useWeather(stations, { ...deps, requestNotifyPermission, notify: vi.fn() }),
+    )
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    await act(async () => result.current.toggleNotify('Seoul'))
+    expect(result.current.notifyCities.has('Seoul')).toBe(true)
+    expect(requestNotifyPermission).toHaveBeenCalled()
+    await act(async () => result.current.toggleNotify('Seoul'))
+    expect(result.current.notifyCities.has('Seoul')).toBe(false)
+  })
+
+  it('notifies a watched city when a newer observation arrives', async () => {
+    const deps = makeDeps()
+    const notify = vi.fn()
+    deps.fetchMetar = vi
+      .fn()
+      .mockResolvedValueOnce({ RKSI: [{ obsTime: obsEpoch, tempC: 19.5 }] }) // initial
+      .mockResolvedValue({ RKSI: [{ obsTime: obsEpoch + 3600, tempC: 21 }] }) // newer
+    const { result } = renderHook(() =>
+      useWeather(stations, {
+        ...deps, notify, requestNotifyPermission: () => {}, initialNotifyCities: ['Seoul'],
+      }),
+    )
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(notify).not.toHaveBeenCalled() // first obs is the baseline, no alert
+    await act(async () => { await result.current.refresh() })
+    await waitFor(() => expect(notify).toHaveBeenCalledTimes(1)) // the newer obs fires once
   })
 
   it('caches a successful forecast for later fallback', async () => {
