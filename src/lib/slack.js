@@ -37,7 +37,9 @@ export async function sendSlack(webhookUrl, text) {
     await fetch(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      // username/icon override the sender shown in Slack (honored by classic
+      // Incoming Webhooks; newer apps may ignore it — then rename the app itself).
+      body: JSON.stringify({ text, username: 'Weather Channel', icon_emoji: ':partly_sunny:' }),
     })
     return true
   } catch {
