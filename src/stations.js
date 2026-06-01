@@ -51,6 +51,7 @@ const RAW = [
   { city: 'Panama City', stationLabel: 'Marcos A. Gelabert Intl', icao: 'MPMG', lat: 8.973, lon: -79.556, tz: 'America/Panama' },
   { city: 'Qingdao', stationLabel: 'Jiaodong Intl Airport', icao: 'ZSQD', lat: 36.366, lon: 120.086, tz: 'Asia/Shanghai' },
   { city: 'Cape Town', stationLabel: 'Cape Town Intl Airport', icao: 'FACT', lat: -33.969, lon: 18.597, tz: 'Africa/Johannesburg' },
+  { city: 'Toronto', stationLabel: 'Pearson Intl Airport', icao: 'CYYZ', lat: 43.677, lon: -79.631, tz: 'America/Toronto' },
 ]
 
 // weather.com place IDs for direct links to each city's weather page.
@@ -101,6 +102,7 @@ const WC_ID = {
   'Panama City':   'edd7ddc0cc064610b4f9c3a7e2d1b8f5c6a0d4e9b2f7c1a5d8e3b6f0c4a2d793',
   'Qingdao':       'ebcfb1ee3ef00522d7c4b9f1a6e3d8c2b5f0a7e4d1c9b6f3a2e8d5c0b7f1a394',
   'Cape Town':     '2337ef7978c41e93b5d0f4a8c1e6b2f9d7c3a5e8b4f1d6c0a9e2b7f3d5c8a041',
+  'Toronto':       'b7336def86611c33dd6c1c04d682625cfe24acf572c7227b47a63d346661c06e',
 }
 
 // ISO-2 country per ICAO, used to build each station's Wunderground station code
@@ -114,7 +116,7 @@ const WU_CC = {
   LIMC: 'IT', RPLL: 'PH', WMKK: 'MY', OEJN: 'SA', EFHK: 'FI', ZHHH: 'CN', KSEA: 'US',
   LTAC: 'TR', KATL: 'US', ZUUU: 'CN', ZUCK: 'CN', KLAX: 'US', SBGR: 'BR', RKPK: 'KR',
   LTFM: 'TR', KSFO: 'US', UUWW: 'RU', LLBG: 'IL', KDAL: 'US', ZGGG: 'CN', MPMG: 'PA',
-  ZSQD: 'CN', FACT: 'ZA',
+  ZSQD: 'CN', FACT: 'ZA', CYYZ: 'CA',
 }
 
 // wuCode: the WU station code each hourly card reads its "WU" value through.

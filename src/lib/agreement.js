@@ -50,26 +50,36 @@ export function computeAgreement(sites, reportsTenths = true, modelWeights = {})
     }
   })
 
-  // Weighted median — accurate models shift the center toward their predictions.
+  // For display: weighted median (precise decimal for the "median N.NN°" label).
   const medianC = weightedMedian(scored.map((s) => ({ v: s.highC, w: s.weight })))
-  const consensusC = Math.round(medianC)
 
-  // Agreement is measured in the market's unit, counting weighted votes.
+  // Consensus = the most-voted rounded value (MODE, weighted), not the median.
+  // If 5 models say 35 and 3 say 36/38/39, the consensus is 35, not 36.
+  // For °F markets: most-voted 2°F bucket.
+  // For °C markets: most-voted whole °C (= what the market resolves on).
   let bucketLowF = null
   let withAgree
+  let consensusC
+
   if (reportsTenths) {
     const counts = new Map()
     for (const s of scored) counts.set(s.bucketLow, (counts.get(s.bucketLow) || 0) + s.weight)
-    const sortedB = scored.map((s) => s.bucketLow).sort((a, b) => a - b)
-    const medianBucket = sortedB[Math.floor(sortedB.length / 2)]
     let best = -1
     for (const [val, c] of counts) {
-      if (c > best || (c === best && Math.abs(val - medianBucket) < Math.abs(bucketLowF - medianBucket))) {
-        best = c; bucketLowF = val
-      }
+      if (c > best) { best = c; bucketLowF = val }
     }
     withAgree = scored.map((s) => ({ ...s, agrees: s.bucketLow === bucketLowF }))
+    // °C reference = rounded median (informational only for °F markets)
+    consensusC = Math.round(medianC)
   } else {
+    // °C market: most-voted whole °C is the consensus
+    const counts = new Map()
+    for (const s of scored) counts.set(s.roundedC, (counts.get(s.roundedC) || 0) + s.weight)
+    let best = -1; let modeC = Math.round(medianC)
+    for (const [val, c] of counts) {
+      if (c > best) { best = c; modeC = val }
+    }
+    consensusC = modeC
     withAgree = scored.map((s) => ({ ...s, agrees: s.roundedC === consensusC }))
   }
 
@@ -80,8 +90,8 @@ export function computeAgreement(sites, reportsTenths = true, modelWeights = {})
   return {
     bucketLowF,
     bucketLabel: bucketLowF != null ? `${bucketLowF}–${bucketLowF + 1}` : null,
-    consensusC,
-    medianC,
+    consensusC, // the MODE (most-voted) — what most models actually predict
+    medianC,    // the median (shown as the precise decimal in the panel label)
     agree,
     total: withAgree.length,
     pct: Math.round((agreeWeight / totalWeight) * 100), // weighted agreement %
