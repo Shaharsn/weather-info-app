@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    { "source": "/metar-api/:path*", "destination": "/api/metar-proxy" },
+    { "source": "/metno-api/:path*", "destination": "/api/metno-proxy" },
+    { "source": "/wu-api/:path*",    "destination": "/api/wu-proxy" },
+    { "source": "/slack/:path*",     "destination": "/api/slack-proxy" },
+    { "source": "/api/accuracy-log", "destination": "/api/accuracy-log" }
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite"
+}
