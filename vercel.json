@@ -5,6 +5,7 @@
     { "source": "/wu-api/(.*)",    "destination": "/api/wu-proxy" },
     { "source": "/slack/(.*)",     "destination": "/api/slack-proxy" }
   ],
+  "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite"
