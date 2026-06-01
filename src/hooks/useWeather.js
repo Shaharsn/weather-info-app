@@ -8,7 +8,7 @@ import {
   notify as defaultNotify,
   requestNotifyPermission as defaultRequestPermission,
 } from '../lib/notify.js'
-import { sendSlack as defaultSendSlack, readSlackWebhook } from '../lib/slack.js'
+import { sendSlack as defaultSendSlack, readSlackConfig } from '../lib/slack.js'
 import {
   readForecastCache as defaultReadCache,
   writeForecastCache as defaultWriteCache,
@@ -46,7 +46,7 @@ export function useWeather(stations, deps = {}) {
   const notify = deps.notify ?? defaultNotify
   const requestPermission = deps.requestNotifyPermission ?? defaultRequestPermission
   const sendSlack = deps.sendSlack ?? defaultSendSlack
-  const getSlackWebhook = deps.getSlackWebhook ?? readSlackWebhook
+  const getSlackConfig = deps.getSlackConfig ?? readSlackConfig
 
   const [rows, setRows] = useState([])
   const [status, setStatus] = useState('loading') // loading | ready | error
@@ -186,11 +186,11 @@ export function useWeather(stations, deps = {}) {
         const title = `${row.city}: now ${formatTemp(row.now.tempC, unit)}`
         const body = `New observation · today's high ${formatTemp(high, unit)}`
         notify(title, body)
-        const webhook = getSlackWebhook()
-        if (webhook) sendSlack(webhook, `*${title}*\n${body}`)
+        const { token, channel } = getSlackConfig()
+        if (token && channel) sendSlack(token, channel, `*${title}*\n${body}`)
       }
     }
-  }, [rows, notifyCities, notify, sendSlack, getSlackWebhook])
+  }, [rows, notifyCities, notify, sendSlack, getSlackConfig])
 
   return {
     rows, status, lastUpdated, forecastError, forecastStaleSince,

@@ -2,24 +2,25 @@ import { useMemo, useState } from 'react'
 import { STATIONS } from './stations.js'
 import { useWeather } from './hooks/useWeather.js'
 import StationRow from './components/StationRow.jsx'
-import { readSlackWebhook, writeSlackWebhook, sendSlack } from './lib/slack.js'
+import { readSlackConfig, writeSlackConfig, sendSlack } from './lib/slack.js'
 
 export default function App() {
   const { rows, status, lastUpdated, forecastError, forecastStaleSince, refresh, notifyCities, toggleNotify } =
     useWeather(STATIONS)
   const [query, setQuery] = useState('')
   const [slackOpen, setSlackOpen] = useState(false)
-  const [slackUrl, setSlackUrl] = useState(readSlackWebhook)
+  const [slackToken, setSlackToken] = useState(() => readSlackConfig().token)
+  const [slackChannel, setSlackChannel] = useState(() => readSlackConfig().channel)
   const [slackStatus, setSlackStatus] = useState('')
 
   const saveSlack = () => {
-    writeSlackWebhook(slackUrl)
-    setSlackStatus(slackUrl.trim() ? 'Saved — watched cities will also alert Slack.' : 'Cleared.')
+    writeSlackConfig({ token: slackToken, channel: slackChannel })
+    setSlackStatus(slackToken.trim() && slackChannel.trim() ? 'Saved.' : 'Cleared.')
   }
   const testSlack = async () => {
     setSlackStatus('Sending…')
-    const ok = await sendSlack(slackUrl, 'Test from Weather Info ✅ — Slack alerts are working.')
-    setSlackStatus(ok ? 'Sent — check Slack.' : 'Failed — check the webhook URL.')
+    const ok = await sendSlack(slackToken, slackChannel, 'Test from Weather Info ✅ — Slack alerts are working.')
+    setSlackStatus(ok ? 'Sent — check Slack.' : 'Failed — check token and channel ID.')
   }
 
   const filtered = useMemo(() => {
@@ -56,14 +57,22 @@ export default function App() {
           <div className="slack-settings">
             <input
               className="slack-input"
+              type="password"
+              placeholder="Bot token (xoxb-…)"
+              value={slackToken}
+              onChange={(e) => setSlackToken(e.target.value)}
+              aria-label="Slack bot token"
+            />
+            <input
+              className="slack-input slack-input-short"
               type="text"
-              placeholder="Slack Incoming Webhook URL (https://hooks.slack.com/services/…)"
-              value={slackUrl}
-              onChange={(e) => setSlackUrl(e.target.value)}
-              aria-label="Slack webhook URL"
+              placeholder="Channel ID (D…)"
+              value={slackChannel}
+              onChange={(e) => setSlackChannel(e.target.value)}
+              aria-label="Slack channel ID"
             />
             <button onClick={saveSlack}>Save</button>
-            <button onClick={testSlack} disabled={!slackUrl.trim()}>Test</button>
+            <button onClick={testSlack} disabled={!slackToken.trim() || !slackChannel.trim()}>Test</button>
             {slackStatus && <span className="slack-status">{slackStatus}</span>}
           </div>
         )}

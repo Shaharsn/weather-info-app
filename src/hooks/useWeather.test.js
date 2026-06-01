@@ -138,7 +138,7 @@ describe('useWeather', () => {
     const { result } = renderHook(() =>
       useWeather(stations, {
         ...deps, notify: vi.fn(), requestNotifyPermission: () => {}, initialNotifyCities: ['Seoul'],
-        sendSlack, getSlackWebhook: () => 'https://hooks.slack.com/services/T/B/x',
+        sendSlack, getSlackConfig: () => ({ token: 'xoxb-test', channel: 'D123' }),
       }),
     )
     await waitFor(() => expect(result.current.status).toBe('ready'))

@@ -66,9 +66,10 @@ body {
   margin-top: 10px; padding-left: var(--gutter);
 }
 .slack-settings .slack-input {
-  flex: 1; min-width: 280px; padding: 7px 11px; border-radius: 9px;
+  flex: 1; min-width: 260px; padding: 7px 11px; border-radius: 9px;
   border: 1px solid var(--border); background: var(--panel-2); color: inherit; font-size: 12px;
 }
+.slack-settings .slack-input-short { flex: 0 0 160px; min-width: 0; }
 .slack-settings button {
   padding: 7px 12px; border-radius: 9px; border: 1px solid var(--border);
   background: var(--panel-2); color: inherit; cursor: pointer; font-size: 13px;

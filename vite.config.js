@@ -25,9 +25,9 @@ const proxy = {
     changeOrigin: true,
     rewrite: (p) => p.replace(/^\/wu-api/, ''),
   },
-  // Slack Incoming Webhooks reject browser CORS. Proxied (same-origin POST) it works.
+  // Slack API rejects browser CORS. Proxied (same-origin POST) it works.
   '/slack': {
-    target: 'https://hooks.slack.com',
+    target: 'https://slack.com',
     changeOrigin: true,
     rewrite: (p) => p.replace(/^\/slack/, ''),
   },

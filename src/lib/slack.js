@@ -1,47 +1,45 @@
-// Send a message to a Slack Incoming Webhook. Slack blocks browser CORS, so the
-// request goes through the dev/preview server's `/slack` proxy (same-origin).
-// The webhook URL is a secret the user pastes in the app (stored locally only).
-const WEBHOOK_KEY = 'weather-slack-webhook'
+// Send messages via the Slack Web API (chat.postMessage). Slack blocks browser
+// CORS, so the request goes through the dev/preview server's `/slack` proxy.
+// The token and channel ID are stored in localStorage only — never in the code.
+const TOKEN_KEY = 'weather-slack-token'
+const CHANNEL_KEY = 'weather-slack-channel'
 
-export const readSlackWebhook = () => {
+export const readSlackConfig = () => {
   try {
-    return localStorage.getItem(WEBHOOK_KEY) || ''
+    return {
+      token: localStorage.getItem(TOKEN_KEY) || '',
+      channel: localStorage.getItem(CHANNEL_KEY) || '',
+    }
   } catch {
-    return ''
+    return { token: '', channel: '' }
   }
 }
 
-export const writeSlackWebhook = (url) => {
+export const writeSlackConfig = ({ token, channel }) => {
   try {
-    localStorage.setItem(WEBHOOK_KEY, (url || '').trim())
-  } catch {
-    /* ignore */
-  }
+    localStorage.setItem(TOKEN_KEY, (token || '').trim())
+    localStorage.setItem(CHANNEL_KEY, (channel || '').trim())
+  } catch { /* ignore */ }
 }
 
-// Turn a full hooks.slack.com webhook URL into the same-origin proxied path.
-export function slackProxyPath(webhookUrl) {
+export async function sendSlack(token, channel, text) {
+  if (!token || !channel) return false
   try {
-    const u = new URL(webhookUrl)
-    if (u.hostname !== 'hooks.slack.com') return null
-    return '/slack' + u.pathname + u.search
-  } catch {
-    return null
-  }
-}
-
-export async function sendSlack(webhookUrl, text) {
-  const path = slackProxyPath(webhookUrl)
-  if (!path) return false
-  try {
-    await fetch(path, {
+    const res = await fetch('/slack/api/chat.postMessage', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      // username/icon override the sender shown in Slack (honored by classic
-      // Incoming Webhooks; newer apps may ignore it — then rename the app itself).
-      body: JSON.stringify({ text, username: 'Weather Channel', icon_emoji: ':partly_sunny:' }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        channel,
+        text,
+        username: 'Weather Channel',
+        icon_emoji: ':partly_sunny:',
+      }),
     })
-    return true
+    const json = await res.json()
+    return json.ok === true
   } catch {
     return false
   }
