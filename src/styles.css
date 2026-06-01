@@ -10,7 +10,7 @@
   --cold: #62a8ff;
   --warm-badge: #ffd479;
   --observed: #7ee0a0;
-  --gutter: 28px; /* peak-clock gutter (22px marker + 6px gap) before each row card */
+  --gutter: 58px; /* peak-clock gutter (52px marker + 6px gap) before each row card */
 }
 
 * { box-sizing: border-box; }
@@ -153,11 +153,13 @@ body {
 
 .station-line { display: flex; align-items: flex-start; gap: 6px; }
 .station-line > .station-row { flex: 1; min-width: 0; }
-/* Fixed-width gutter — always the same width regardless of which icons are active,
-   so all rows align identically. Icons sit in a row with the clock always leftmost. */
+/* Fixed-width gutter — always exactly 52px regardless of how many icons show,
+   so every card's left edge is perfectly aligned. Clock + status icons sit
+   side-by-side, right-justified so the card edge never shifts. */
 .peak-marker {
-  flex: 0 0 var(--gutter); display: flex; flex-direction: row; align-items: flex-start;
-  gap: 2px; padding-top: 9px; flex-shrink: 0;
+  flex: 0 0 52px; width: 52px; display: flex; flex-direction: row;
+  align-items: flex-start; justify-content: flex-end;
+  gap: 3px; padding-top: 9px; flex-shrink: 0;
 }
 .peak-flags { display: flex; flex-direction: column; gap: 2px; }
 .peak-flag { cursor: help; font-size: 12px; line-height: 1; }
