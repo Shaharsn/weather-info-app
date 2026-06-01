@@ -194,6 +194,12 @@ body {
 .hour.pending .hour-temp { color: var(--warm-badge); }
 .hour .hour-wu { font-size: 11px; color: #c08af0; font-weight: 600; } /* violet — distinct from observed-green */
 .agreement .obs-exceeds { color: var(--observed); font-weight: 600; }
+.acc-badge {
+  display: inline-block; margin-left: 4px;
+  font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 5px;
+  background: rgba(192, 138, 240, 0.2); color: #c08af0;
+  vertical-align: middle;
+}
 .hour .hour-label { font-weight: 650; }
 .hour .hour-temp { font-weight: 600; }
 .hour .hour-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); }

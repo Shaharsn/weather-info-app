@@ -4,7 +4,7 @@ import { useConfidence } from '../hooks/useConfidence.js'
 import { useWunderground } from '../hooks/useWunderground.js'
 import HourlyStrip from './HourlyStrip.jsx'
 
-export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified = false, onToggleNotify }) {
+export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified = false, onToggleNotify, cityAccuracy = {} }) {
   const [open, setOpen] = useState(false)
   // Show only the unit the market resolves in: °F for US (tenths) stations,
   // °C for the rest — so there's no cross-unit confusion.
@@ -13,7 +13,7 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
   const hoursToday = row.localTime ? Number(row.localTime.slice(0, 2)) + 1 : 12
   const [selected, setSelected] = useState(null) // selected hour's time string
   const confidence = useConfidence(
-    { lat: row.lat, lon: row.lon, reportsTenths: row.reportsTenths },
+    { lat: row.lat, lon: row.lon, reportsTenths: row.reportsTenths, modelWeights: cityAccuracy },
     open,
     confidenceDeps,
   )
@@ -163,6 +163,7 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
             row={row}
             confidence={confidence}
             wuByHour={wuByHour}
+            cityAccuracy={cityAccuracy}
             reportsTenths={row.reportsTenths}
             unit={unit}
             selected={selected}

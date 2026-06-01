@@ -28,7 +28,11 @@ export function useConfidence(target, enabled, deps = {}) {
     let cancelled = false
 
     const settle = (models) => {
-      const agreement = computeAgreement(models, target.reportsTenths)
+      // Build weight map from accuracy log: { modelName: weight }
+      const modelWeights = Object.fromEntries(
+        Object.entries(target.modelWeights ?? {}).map(([name, s]) => [name, s.weight ?? 1.0]),
+      )
+      const agreement = computeAgreement(models, target.reportsTenths, modelWeights)
       if (!cancelled) setState({ status: agreement ? 'ready' : 'unavailable', agreement, models })
     }
 

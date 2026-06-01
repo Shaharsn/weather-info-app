@@ -11,21 +11,37 @@ export default function accuracyLogPlugin() {
     name: 'accuracy-log',
     configureServer(server) {
       server.middlewares.use('/api/accuracy-log', async (req, res) => {
-        if (req.method !== 'POST') {
-          res.statusCode = 405; res.end('Method Not Allowed'); return
-        }
-        let body = ''
-        req.on('data', (c) => { body += c })
-        req.on('end', () => {
+        res.setHeader('Content-Type', 'application/json')
+
+        // GET — return the full log so the browser can compute accuracy weights.
+        if (req.method === 'GET') {
           try {
-            JSON.parse(body) // validate before writing
-            fs.appendFileSync(LOG_FILE, body.trim() + '\n', 'utf8')
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ ok: true }))
+            const raw = fs.existsSync(LOG_FILE) ? fs.readFileSync(LOG_FILE, 'utf8') : ''
+            const entries = raw.split('\n').filter(Boolean).map((l) => JSON.parse(l))
+            res.end(JSON.stringify({ ok: true, entries }))
           } catch (e) {
-            res.statusCode = 400; res.end(JSON.stringify({ ok: false, error: String(e) }))
+            res.statusCode = 500; res.end(JSON.stringify({ ok: false, error: String(e) }))
           }
-        })
+          return
+        }
+
+        // POST — append a new record.
+        if (req.method === 'POST') {
+          let body = ''
+          req.on('data', (c) => { body += c })
+          req.on('end', () => {
+            try {
+              JSON.parse(body)
+              fs.appendFileSync(LOG_FILE, body.trim() + '\n', 'utf8')
+              res.end(JSON.stringify({ ok: true }))
+            } catch (e) {
+              res.statusCode = 400; res.end(JSON.stringify({ ok: false, error: String(e) }))
+            }
+          })
+          return
+        }
+
+        res.statusCode = 405; res.end('Method Not Allowed')
       })
     },
   }

@@ -26,7 +26,7 @@ function ConsensusTarget({ a, unit }) {
 }
 
 // Default view (no hour selected): the multi-model consensus for today's high.
-function Agreement({ confidence, unit, observedHighC }) {
+function Agreement({ confidence, unit, observedHighC, cityAccuracy = {} }) {
   if (!confidence || confidence.status === 'idle') return null
   if (confidence.status === 'loading') {
     return <div className="agreement muted">Checking model agreement…</div>
@@ -51,11 +51,19 @@ function Agreement({ confidence, unit, observedHighC }) {
         <span className="hint"> · click an hour for its per-source values</span>
       </div>
       <div className="agreement-sites">
-        {a.sites.map((s) => (
-          <span key={s.name} className={`vote ${s.agrees ? 'agree' : 'disagree'}`}>
-            {s.name} {formatTemp(s.highC, unit)} <span className="hd-round">→ {targetLabel(s, unit)}</span>
-          </span>
-        ))}
+        {a.sites.map((s) => {
+          const acc = cityAccuracy[s.name]
+          return (
+            <span key={s.name} className={`vote ${s.agrees ? 'agree' : 'disagree'}`}>
+              {s.name} {formatTemp(s.highC, unit)} <span className="hd-round">→ {targetLabel(s, unit)}</span>
+              {acc && acc.total >= 3 && (
+                <span className="acc-badge" title={`Historical accuracy: ${acc.exactPct}% exact, ${acc.closePct}% within 1° (${acc.total} obs)`}>
+                  {acc.exactPct}%
+                </span>
+              )}
+            </span>
+          )
+        })}
       </div>
     </div>
   )
@@ -112,7 +120,7 @@ function HourDetail({ card, models, reportsTenths, unit }) {
   )
 }
 
-export default function HourlyStrip({ row, confidence, wuByHour, reportsTenths, unit = 'both', selected, onSelect }) {
+export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = {}, reportsTenths, unit = 'both', selected, onSelect }) {
   const temps = row.hourly.map((h) => h.tempC).filter((n) => typeof n === 'number')
   const max = temps.length ? Math.max(...temps) : null
   const min = temps.length ? Math.min(...temps) : null
@@ -150,7 +158,7 @@ export default function HourlyStrip({ row, confidence, wuByHour, reportsTenths, 
       {selectedCard ? (
         <HourDetail card={selectedCard} models={confidence?.models} reportsTenths={reportsTenths} unit={unit} />
       ) : (
-        <Agreement confidence={confidence} unit={unit} observedHighC={row.observedHighC} />
+        <Agreement confidence={confidence} unit={unit} observedHighC={row.observedHighC} cityAccuracy={cityAccuracy} />
       )}
     </div>
   )

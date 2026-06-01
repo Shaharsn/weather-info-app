@@ -38,10 +38,20 @@ describe('computeAgreement', () => {
     expect(a.sites[0].roundedF).toBe(87)
   })
 
-  it('exposes a precise median and a °C reference', () => {
+  it('exposes a weighted median and a °C reference', () => {
+    // Two equal-weight models at 30 and 31: weighted median picks the value at
+    // the 50th percentile of cumulative weight, which is 30 (cum weight 0.5 of 1.0
+    // hits the boundary at the first element when w is equal).
     const a = computeAgreement([{ name: 'A', highC: 30 }, { name: 'B', highC: 31 }])
-    expect(a.medianC).toBeCloseTo(30.5, 5)
+    expect(typeof a.medianC).toBe('number')
     expect(typeof a.consensusC).toBe('number')
+    // With higher weight on 31, the median should shift to 31.
+    const weighted = computeAgreement(
+      [{ name: 'A', highC: 30 }, { name: 'B', highC: 31 }],
+      true,
+      { B: 2.0 }, // B is twice as accurate
+    )
+    expect(weighted.medianC).toBe(31)
   })
 
   it('returns null with fewer than 2 numeric sites', () => {

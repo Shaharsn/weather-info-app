@@ -4,11 +4,13 @@ import { useWeather } from './hooks/useWeather.js'
 import StationRow from './components/StationRow.jsx'
 import { readSlackConfig, writeSlackConfig, sendSlack } from './lib/slack.js'
 import { runAccuracyCheck } from './lib/accuracyTracker.js'
+import { useAccuracyData } from './hooks/useAccuracyData.js'
 
 export default function App() {
   const { rows, status, lastUpdated, forecastError, forecastStaleSince, refresh, notifyCities, toggleNotify } =
     useWeather(STATIONS)
   const [query, setQuery] = useState('')
+  const accuracyScores = useAccuracyData() // { city: { modelName: { exactPct, weight, … } } }
   const rowsRef = useRef(rows)
   rowsRef.current = rows
   // Hourly accuracy check: compare each model's predicted daily high to the
@@ -113,6 +115,7 @@ export default function App() {
             row={row}
             isNotified={notifyCities?.has(row.city) ?? false}
             onToggleNotify={() => toggleNotify?.(row.city)}
+            cityAccuracy={accuracyScores[row.city] ?? {}}
           />
         ))}
         {rows.length > 0 && filtered.length === 0 && (
