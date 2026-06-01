@@ -55,8 +55,15 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
 
   // Gutter LEFT of the card — ALWAYS the same width/height so rows align consistently
   // regardless of how many status icons are active. Icons sit in a row.
+  // Gutter: two fixed-width slots so every card left-edge is identical.
+  // Slot 1 (left, 20px): status icon — 🔥 / ❄️ / empty.
+  // Slot 2 (right, 26px): clock button — always present.
   const marker = (
     <div className="peak-marker">
+      <span className="peak-flag-slot">
+        {row.peakImminent && <span className="peak-flag" title="Today's high is forecast for the next hour — peaking soon">🔥</span>}
+        {row.peakLocked && <span className="peak-flag" title="Today's high already happened; every remaining hour is forecast lower — high locked in">❄️</span>}
+      </span>
       <button
         type="button"
         className={`watch-btn${isNotified ? ' notifying' : ''}${row.isPeakHour ? ' peak' : ''}`}
@@ -72,10 +79,6 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
         🕒
         {isNotified && <span className="notify-dot">🔔</span>}
       </button>
-      <span className="peak-flags">
-        {row.peakImminent && <span className="peak-flag" title="Today's high is forecast for the next hour — peaking soon">🔥</span>}
-        {row.peakLocked && <span className="peak-flag" title="Today's high already happened; every remaining hour is forecast lower — high locked in">❄️</span>}
-      </span>
     </div>
   )
 
