@@ -25,9 +25,7 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
   // forecast that overshoots the obs (e.g. models say 16 while it peaked at 14)
   // is never presented as the high. Before any obs exist, fall back to forecast.
   const observedHigh = row.observedHighC
-  const forecastHigh = row.forecastHighC
-  const displayedHigh = observedHigh ?? forecastHigh ?? row.todayHighC
-  const showForecastAside = observedHigh != null && forecastHigh != null
+  const displayedHigh = observedHigh ?? row.forecastHighC ?? row.todayHighC
 
   // Clicking the city name opens its Polymarket market — "Highest temperature in
   // <city> on <month> <day> <year>", using the city's OWN local date (the date
@@ -151,12 +149,7 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
                 : 'Forecast high (no observations yet today)'
             }
           >
-            <em>High{observedHigh == null ? ' ?' : ''}</em> {formatTemp(displayedHigh, unit)}
-            {showForecastAside && (
-              <span className="fcst-high" title="Multi-model forecast high (8-model median) — shown when different from the observed running high">
-                〜{formatTemp(forecastHigh, unit)}
-              </span>
-            )}
+            <em>High</em> {formatTemp(displayedHigh, unit)}
           </span>
         </div>
         {open && (

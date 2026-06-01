@@ -19,17 +19,16 @@ describe('StationRow', () => {
     expect(screen.getByText('12.40°C')).toBeInTheDocument() // now
     expect(screen.getByText('18.00°C')).toBeInTheDocument() // today high
   })
-  it('shows the OBSERVED high as the headline, forecast beside it with tilde', () => {
+  it('shows the OBSERVED high as the headline (no forecast aside)', () => {
     render(<StationRow row={{ ...base, observedHighC: 14, forecastHighC: 16 }} />)
-    expect(screen.getByText('14.00°C')).toBeInTheDocument() // observed peak = the resolution number
-    expect(screen.getByText(/〜16.00°C/)).toBeInTheDocument() // forecast projection
+    expect(screen.getByText('14.00°C')).toBeInTheDocument()
+    expect(screen.queryByText(/〜/)).not.toBeInTheDocument()
   })
-  it('falls back to a question-marked forecast high before any observations', () => {
+  it('falls back to the forecast high before any observations', () => {
     render(
       <StationRow row={{ ...base, icao: null, hasObs: false, observedHighC: null, forecastHighC: 16 }} />,
     )
     expect(screen.getByText('16.00°C')).toBeInTheDocument()
-    expect(screen.getByText(/High\s*\?/)).toBeInTheDocument()
   })
   it('shows °F only for a US (tenths) station', () => {
     render(<StationRow row={{ ...base, reportsTenths: true }} />)
