@@ -120,12 +120,40 @@ function HourDetail({ card, models, reportsTenths, unit }) {
   )
 }
 
+// When the ensemble is loaded, compute the per-hour median from the actual
+// model values — the same source the panel's bucket comes from.  This replaces
+// the stale batch-forecast value so card and panel are always consistent.
+function ensembleHourlyMedian(models) {
+  if (!models?.length) return {}
+  const byHour = {}
+  for (const m of models) {
+    for (const [time, tempC] of Object.entries(m.hourly || {})) {
+      ;(byHour[time] ??= []).push(tempC)
+    }
+  }
+  const med = (arr) => {
+    const s = [...arr].sort((a, b) => a - b)
+    const m = Math.floor(s.length / 2)
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+  }
+  return Object.fromEntries(Object.entries(byHour).map(([t, v]) => [t, med(v)]))
+}
+
 export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = {}, reportsTenths, unit = 'both', selected, onSelect }) {
-  const temps = row.hourly.map((h) => h.tempC).filter((n) => typeof n === 'number')
+  // Use the ensemble-derived hourly median when available so the card value and
+  // the panel's bucket/median always come from the same data source.
+  const ensHourly = confidence?.status === 'ready' ? ensembleHourlyMedian(confidence.models) : {}
+
+  const resolvedHourly = row.hourly.map((h) => ({
+    ...h,
+    tempC: !h.observed && !h.isNow && ensHourly[h.time] != null ? ensHourly[h.time] : h.tempC,
+  }))
+
+  const temps = resolvedHourly.map((h) => h.tempC).filter((n) => typeof n === 'number')
   const max = temps.length ? Math.max(...temps) : null
   const min = temps.length ? Math.min(...temps) : null
-  const spread = max !== min // only color when there's an actual high vs low
-  const selectedCard = selected ? row.hourly.find((h) => h.time === selected) : null
+  const spread = max !== min
+  const selectedCard = selected ? resolvedHourly.find((h) => h.time === selected) : null
 
   return (
     <div className="hourly-strip">
@@ -133,12 +161,12 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
         <div className="obs-time">Observed at {obsTimeLabel(row.now.obsTime)}</div>
       )}
       <div className="hours">
-        {row.hourly.map((h) => {
+        {resolvedHourly.map((h) => {
           const hot = spread && h.tempC === max
           const cold = spread && h.tempC === min
           const kind = h.isNow ? 'now' : h.observed ? 'observed' : 'forecast'
           const isSel = h.time === selected
-          const wu = wuByHour?.[h.time] // Wunderground's value for this hour
+          const wu = wuByHour?.[h.time]
           return (
             <button
               key={h.time}
