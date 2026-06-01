@@ -1,12 +1,16 @@
 {
   "rewrites": [
-    { "source": "/metar-api/:path*", "destination": "/api/metar-proxy" },
-    { "source": "/metno-api/:path*", "destination": "/api/metno-proxy" },
-    { "source": "/wu-api/:path*",    "destination": "/api/wu-proxy" },
-    { "source": "/slack/:path*",     "destination": "/api/slack-proxy" },
-    { "source": "/api/accuracy-log", "destination": "/api/accuracy-log" }
+    { "source": "/metar-api/(.*)", "destination": "/api/metar-proxy" },
+    { "source": "/metno-api/(.*)", "destination": "/api/metno-proxy" },
+    { "source": "/wu-api/(.*)",    "destination": "/api/wu-proxy" },
+    { "source": "/slack/(.*)",     "destination": "/api/slack-proxy" }
   ],
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite"
+  "framework": "vite",
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs22.x"
+    }
+  }
 }
