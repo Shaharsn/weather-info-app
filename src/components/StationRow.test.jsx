@@ -46,13 +46,21 @@ describe('StationRow', () => {
     )
     expect(container.querySelector('.warn-badge')).toBeNull()
   })
-  it('copies the city name to the clipboard when the city is clicked', () => {
-    const writeText = vi.fn().mockResolvedValue()
-    vi.stubGlobal('navigator', { clipboard: { writeText } })
+  it('city name links to the Polymarket market for that city', () => {
     render(<StationRow row={base} />)
-    fireEvent.click(screen.getByText('Seoul'))
-    expect(writeText).toHaveBeenCalledWith('Seoul')
-    vi.unstubAllGlobals()
+    const link = screen.getByText('Seoul').closest('a')
+    expect(link).toHaveAttribute(
+      'href',
+      expect.stringContaining('polymarket.com/event/highest-temperature-in-seoul-on-'),
+    )
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+  it('slugifies multi-word cities for the Polymarket link', () => {
+    render(<StationRow row={{ ...base, city: 'Sao Paulo' }} />)
+    expect(screen.getByText('Sao Paulo').closest('a')).toHaveAttribute(
+      'href',
+      expect.stringContaining('highest-temperature-in-sao-paulo-on-'),
+    )
   })
   it('tints the clock during peak-heat hours', () => {
     const { rerender, container } = render(<StationRow row={base} />)

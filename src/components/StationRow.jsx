@@ -6,7 +6,6 @@ import HourlyStrip from './HourlyStrip.jsx'
 
 export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified = false, onToggleNotify }) {
   const [open, setOpen] = useState(false)
-  const [copied, setCopied] = useState(false)
   // Show only the unit the market resolves in: °F for US (tenths) stations,
   // °C for the rest — so there's no cross-unit confusion.
   const unit = row.reportsTenths ? 'F' : 'C'
@@ -30,16 +29,21 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
   const displayedHigh = observedHigh ?? forecastHigh ?? row.todayHighC
   const showForecastAside = observedHigh != null && forecastHigh != null
 
-  const copyCity = (e) => {
-    e.stopPropagation()
-    navigator.clipboard?.writeText(row.city).then(
-      () => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1000)
-      },
-      () => {},
-    )
-  }
+  // Clicking the city name opens its Polymarket market — "Highest temperature in
+  // <city> on <month> <day> <year>", using the city's OWN local date (the date
+  // the market resolves on, which can differ from ours across the dateline).
+  const slug = row.city
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // strip accents
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+  const dp = new Intl.DateTimeFormat('en-US', {
+    timeZone: row.tz || undefined, year: 'numeric', month: 'long', day: 'numeric',
+  }).formatToParts(new Date())
+  const dpv = (t) => dp.find((p) => p.type === t)?.value
+  const marketDate = `${dpv('month')} ${dpv('day')}, ${dpv('year')}`
+  const polymarketUrl = `https://polymarket.com/event/highest-temperature-in-${slug}-on-${dpv('month').toLowerCase()}-${dpv('day')}-${dpv('year')}`
 
   // Gutter to the LEFT of the card: a clock you click to get notified on each new
   // observation for this city; plus status flags for "high coming next hour" (🔥)
@@ -113,19 +117,16 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
           }}
         >
           <span className="caret">{open ? '▾' : '▸'}</span>
-          <span
+          <a
             className="city"
-            role="button"
-            tabIndex={0}
-            aria-label="Copy city name"
-            title="Click to copy city name"
-            onClick={copyCity}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') copyCity(e)
-            }}
+            href={polymarketUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Open Polymarket — Highest temperature in ${row.city} on ${marketDate}`}
+            onClick={(e) => e.stopPropagation()}
           >
-            {copied ? '✓ copied' : row.city}
-          </span>
+            {row.city}
+          </a>
           <span className="station-label">{row.stationLabel}</span>
           {row.icao ? (
             <a

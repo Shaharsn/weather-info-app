@@ -106,8 +106,11 @@ body {
 .row-main:focus-visible { outline: 2px solid #3a6df0; outline-offset: -2px; border-radius: 12px; }
 .row-main:hover { background: rgba(255, 255, 255, 0.02); }
 .row-main .caret { width: 12px; color: var(--muted); }
-.row-main .city { font-weight: 650; min-width: 120px; cursor: copy; }
-.row-main .city:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
+.row-main .city {
+  font-weight: 650; min-width: 120px; cursor: pointer;
+  color: inherit; text-decoration: none;
+}
+.row-main .city:hover { color: #cdd9ff; text-decoration: underline dotted; text-underline-offset: 3px; }
 .row-main .city:focus-visible { outline: 2px solid #3a6df0; outline-offset: 2px; border-radius: 4px; }
 .row-main .station-label { color: var(--muted); flex: 1; }
 .row-main .icao {
