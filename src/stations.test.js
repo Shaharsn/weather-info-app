@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { STATIONS } from './stations.js'
 
 describe('STATIONS', () => {
-  it('has 45 entries', () => {
-    expect(STATIONS).toHaveLength(45)
+  it('has 46 entries', () => {
+    expect(STATIONS).toHaveLength(46)
   })
   it('every entry has city, stationLabel, lat, lon, tz', () => {
     for (const s of STATIONS) {
