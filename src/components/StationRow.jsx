@@ -49,9 +49,9 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
   const wuUrl = wuCountry && row.icao
     ? `https://www.wunderground.com/hourly/${wuCountry}/${slug}/${row.icao}`
     : null
-  const weatherComUrl = row.wuCode
-    ? `https://weather.com/weather/today/l/${row.wuCode}`
-    : `https://weather.com/weather/today/l/${row.lat},${row.lon}`
+  const weatherComUrl = row.wcId
+    ? `https://weather.com/weather/today/l/${row.wcId}`
+    : null
 
   // Gutter LEFT of the card — ALWAYS the same width/height so rows align consistently
   // regardless of how many status icons are active. Icons sit in a row.
@@ -140,7 +140,9 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
             {wuUrl && (
               <a className="ext-btn" href={wuUrl} target="_blank" rel="noopener noreferrer" title="Open on Wunderground">UV</a>
             )}
-            <a className="ext-btn" href={weatherComUrl} target="_blank" rel="noopener noreferrer" title="Open on weather.com">WC</a>
+            {weatherComUrl && (
+              <a className="ext-btn" href={weatherComUrl} target="_blank" rel="noopener noreferrer" title="Open on weather.com">WC</a>
+            )}
           </span>
           <span className="metric"><em>Local</em> {row.localTime}</span>
           <span className="metric"><em>Now</em> {formatTemp(row.now.tempC, unit)}</span>
