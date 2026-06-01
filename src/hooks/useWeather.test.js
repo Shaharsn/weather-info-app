@@ -128,6 +128,24 @@ describe('useWeather', () => {
     await waitFor(() => expect(notify).toHaveBeenCalledTimes(1)) // the newer obs fires once
   })
 
+  it('also sends to Slack when a webhook is configured', async () => {
+    const deps = makeDeps()
+    const sendSlack = vi.fn()
+    deps.fetchMetar = vi
+      .fn()
+      .mockResolvedValueOnce({ RKSI: [{ obsTime: obsEpoch, tempC: 19.5 }] })
+      .mockResolvedValue({ RKSI: [{ obsTime: obsEpoch + 3600, tempC: 21 }] })
+    const { result } = renderHook(() =>
+      useWeather(stations, {
+        ...deps, notify: vi.fn(), requestNotifyPermission: () => {}, initialNotifyCities: ['Seoul'],
+        sendSlack, getSlackWebhook: () => 'https://hooks.slack.com/services/T/B/x',
+      }),
+    )
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    await act(async () => { await result.current.refresh() })
+    await waitFor(() => expect(sendSlack).toHaveBeenCalledTimes(1))
+  })
+
   it('caches a successful forecast for later fallback', async () => {
     const deps = makeDeps()
     deps.writeForecastCache = vi.fn()
