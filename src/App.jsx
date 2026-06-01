@@ -1,13 +1,24 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { STATIONS } from './stations.js'
 import { useWeather } from './hooks/useWeather.js'
 import StationRow from './components/StationRow.jsx'
 import { readSlackConfig, writeSlackConfig, sendSlack } from './lib/slack.js'
+import { runAccuracyCheck } from './lib/accuracyTracker.js'
 
 export default function App() {
   const { rows, status, lastUpdated, forecastError, forecastStaleSince, refresh, notifyCities, toggleNotify } =
     useWeather(STATIONS)
   const [query, setQuery] = useState('')
+  const rowsRef = useRef(rows)
+  rowsRef.current = rows
+  // Hourly accuracy check: compare each model's predicted daily high to the
+  // METAR observed high and append to model-accuracy.jsonl.
+  useEffect(() => {
+    const tick = () => runAccuracyCheck(rowsRef.current)
+    tick() // run once on mount
+    const t = setInterval(tick, 60 * 60 * 1000)
+    return () => clearInterval(t)
+  }, [])
   const [slackOpen, setSlackOpen] = useState(false)
   const [slackToken, setSlackToken] = useState(() => readSlackConfig().token)
   const [slackChannel, setSlackChannel] = useState(() => readSlackConfig().channel)

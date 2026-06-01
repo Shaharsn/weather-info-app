@@ -1,0 +1,152 @@
+// Hourly accuracy tracker: fetches per-model ensemble forecasts for all stations,
+// compares each model's predicted daily high to the METAR observed high so far,
+// and appends a record to model-accuracy.jsonl via the Vite dev-server plugin.
+//
+// Each record tracks:
+//   - exact match (model rounds to the same °C as the observed high)
+//   - close match (within 1°C)
+//   - rounding bias (was the model's decimal >0.5 but resolved lower? or <0.5 but higher?)
+//     This reveals whether a station systematically rounds up or down.
+
+import { MODELS } from '../api/ensemble.js'
+
+const INTERVAL_MS = 60 * 60 * 1000 // every hour
+const DONE_KEY = 'accuracy-logged-hours' // { 'city:YYYY-MM-DD:HH': true }
+
+function loggedKey(city, date, hour) {
+  return `${city}:${date}:${hour}`
+}
+
+function readDone() {
+  try { return JSON.parse(localStorage.getItem(DONE_KEY) || '{}') } catch { return {} }
+}
+function markDone(key) {
+  try {
+    const d = readDone(); d[key] = true
+    // Only keep the last 7 days worth to avoid localStorage bloat
+    const keys = Object.keys(d)
+    if (keys.length > 2000) keys.slice(0, keys.length - 2000).forEach((k) => delete d[k])
+    localStorage.setItem(DONE_KEY, JSON.stringify(d))
+  } catch { /* ignore */ }
+}
+
+// Fetch the 8-model ensemble daily high for a single station.
+async function fetchModelHighs(lat, lon) {
+  const ids = MODELS.map((m) => m.id).join(',')
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max&forecast_days=1&timezone=auto&models=${ids}`
+  const loc = await (await fetch(url)).json()
+  return MODELS.map((m) => ({
+    name: m.name,
+    highC: loc.daily?.[`temperature_2m_max_${m.id}`]?.[0] ?? null,
+  })).filter((m) => m.highC != null)
+}
+
+// Post one record to the Vite plugin endpoint.
+async function logRecord(record) {
+  try {
+    await fetch('/api/accuracy-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(record),
+    })
+  } catch { /* dev server may be sleeping; ignore */ }
+}
+
+// Compare model predictions to the current observed high and log.
+// Called once per station per hour (guarded by DONE_KEY).
+async function checkStation(row, date, hour) {
+  const key = loggedKey(row.city, date, hour)
+  if (readDone()[key]) return // already logged this station-hour
+
+  const observedHighC = row.observedHighC
+  if (observedHighC == null || !row.hasObs) return // no observed data yet
+
+  let models
+  try {
+    models = await fetchModelHighs(row.lat, row.lon)
+  } catch {
+    return // rate-limited or offline; skip this tick
+  }
+  if (!models.length) return
+
+  const scored = models.map((m) => {
+    const roundedForecast = Math.round(m.highC)
+    const roundedObserved = Math.round(observedHighC)
+    const diff = m.highC - observedHighC // positive = model ran hot
+    const exact = roundedForecast === roundedObserved
+    const close = Math.abs(diff) <= 1
+    // Rounding bias: the decimal part of the model's prediction vs the
+    // direction the station actually resolved. E.g. model said 35.8 but obs
+    // was 35 → the station rounded DOWN despite a value >0.5 (bias: down).
+    const decimal = m.highC - Math.floor(m.highC)
+    const expectedRound = decimal >= 0.5 ? 'up' : 'down'
+    const actualRound = roundedObserved === Math.ceil(m.highC) ? 'up' : 'down'
+    const biasNote =
+      decimal >= 0.3 && decimal <= 0.7
+        ? actualRound !== expectedRound
+          ? `rounded_${actualRound}_despite_${decimal.toFixed(1)}`
+          : null
+        : null // only flag ambiguous decimals (0.3–0.7)
+
+    return { model: m.name, forecastC: m.highC, roundedForecast, diff: +diff.toFixed(2), exact, close, biasNote }
+  })
+
+  // Median of model predictions
+  const vals = models.map((m) => m.highC).sort((a, b) => a - b)
+  const mid = Math.floor(vals.length / 2)
+  const medianC = vals.length % 2 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2
+
+  const record = {
+    ts: new Date().toISOString(),
+    date,
+    hour,
+    city: row.city,
+    icao: row.icao,
+    observedHighC: +observedHighC.toFixed(2),
+    roundedObserved: Math.round(observedHighC),
+    medianForecastC: +medianC.toFixed(2),
+    models: scored,
+  }
+
+  await logRecord(record)
+  markDone(key)
+}
+
+// Run one pass over all rows — called on the hourly tick.
+export async function runAccuracyCheck(rows) {
+  const now = new Date()
+  const hour = String(now.getUTCHours()).padStart(2, '0')
+  const date = now.toISOString().slice(0, 10)
+
+  // Fan out in parallel but rate-limit to avoid hammering Open-Meteo (6 at a time).
+  const CHUNK = 6
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    await Promise.all(
+      rows.slice(i, i + CHUNK).map((row) => checkStation(row, date, hour).catch(() => {})),
+    )
+  }
+}
+
+// Returns a structured summary of the log for the day so far (or all-time).
+// Reads from localStorage-cached log entries (the server file is the durable copy).
+export function summarizeLog(entries) {
+  const byModel = {}
+  for (const e of entries) {
+    for (const m of e.models || []) {
+      if (!byModel[m.model]) byModel[m.model] = { exact: 0, close: 0, total: 0, biasNotes: [] }
+      byModel[m.model].total++
+      if (m.exact) byModel[m.model].exact++
+      if (m.close) byModel[m.model].close++
+      if (m.biasNote) byModel[m.model].biasNotes.push(m.biasNote)
+    }
+  }
+  return Object.entries(byModel)
+    .map(([name, s]) => ({
+      name,
+      exact: s.exact, close: s.close, total: s.total,
+      exactPct: Math.round((s.exact / s.total) * 100),
+      closePct: Math.round((s.close / s.total) * 100),
+      biasNotes: s.biasNotes,
+    }))
+    .sort((a, b) => b.exactPct - a.exactPct)
+}
