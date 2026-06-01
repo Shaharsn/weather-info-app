@@ -45,9 +45,18 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
   const marketDate = `${dpv('month')} ${dpv('day')}, ${dpv('year')}`
   const polymarketUrl = `https://polymarket.com/event/highest-temperature-in-${slug}-on-${dpv('month').toLowerCase()}-${dpv('day')}-${dpv('year')}`
 
-  // Gutter to the LEFT of the card: a clock you click to get notified on each new
-  // observation for this city; plus status flags for "high coming next hour" (🔥)
-  // and "high already in, rest cooler" (❄️).
+  // External links: WU (wunderground.com) and weather.com, derived from the
+  // station's ICAO and WU country code.
+  const wuCountry = row.wuCode?.split(':')?.[2]?.toLowerCase() ?? null
+  const wuUrl = wuCountry && row.icao
+    ? `https://www.wunderground.com/hourly/${wuCountry}/${slug}/${row.icao}`
+    : null
+  const weatherComUrl = row.wuCode
+    ? `https://weather.com/weather/today/l/${row.wuCode}`
+    : `https://weather.com/weather/today/l/${row.lat},${row.lon}`
+
+  // Gutter LEFT of the card — ALWAYS the same width/height so rows align consistently
+  // regardless of how many status icons are active. Icons sit in a row.
   const marker = (
     <div className="peak-marker">
       <button
@@ -60,27 +69,15 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
             : 'Click to get a notification on each new observation for this city' +
               (row.isPeakHour ? ' (peak-heat hours now)' : '')
         }
-        onClick={(e) => {
-          e.stopPropagation()
-          onToggleNotify?.()
-        }}
+        onClick={(e) => { e.stopPropagation(); onToggleNotify?.() }}
       >
         🕒
         {isNotified && <span className="notify-dot">🔔</span>}
       </button>
-      {row.peakImminent && (
-        <span className="peak-flag" title="Today's high is forecast for the next hour — peaking soon">
-          🔥
-        </span>
-      )}
-      {row.peakLocked && (
-        <span
-          className="peak-flag"
-          title="Today's high already happened; every remaining hour is forecast lower — high locked in"
-        >
-          ❄️
-        </span>
-      )}
+      <span className="peak-flags">
+        {row.peakImminent && <span className="peak-flag" title="Today's high is forecast for the next hour — peaking soon">🔥</span>}
+        {row.peakLocked && <span className="peak-flag" title="Today's high already happened; every remaining hour is forecast lower — high locked in">❄️</span>}
+      </span>
     </div>
   )
 
@@ -128,20 +125,22 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
             {row.city}
           </a>
           <span className="station-label">{row.stationLabel}</span>
-          {row.icao ? (
-            <a
-              className="icao"
-              href={`https://aviationweather.gov/api/data/metar?ids=${row.icao}&format=raw&hours=${hoursToday}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={`Open raw ${row.icao} METAR (aviationweather.gov)`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {row.icao}
-            </a>
-          ) : (
-            !row.hasObs && <span className="badge">no station obs</span>
-          )}
+          <span className="ext-links" onClick={(e) => e.stopPropagation()}>
+            {row.icao ? (
+              <a
+                className="icao"
+                href={`https://aviationweather.gov/api/data/metar?ids=${row.icao}&format=raw&hours=${hoursToday}`}
+                target="_blank" rel="noopener noreferrer"
+                title={`Raw METAR for ${row.icao} (aviationweather.gov)`}
+              >{row.icao}</a>
+            ) : (
+              !row.hasObs && <span className="badge">no station obs</span>
+            )}
+            {wuUrl && (
+              <a className="ext-btn" href={wuUrl} target="_blank" rel="noopener noreferrer" title="Open on Wunderground">UV</a>
+            )}
+            <a className="ext-btn" href={weatherComUrl} target="_blank" rel="noopener noreferrer" title="Open on weather.com">WC</a>
+          </span>
           <span className="metric"><em>Local</em> {row.localTime}</span>
           <span className="metric"><em>Now</em> {formatTemp(row.now.tempC, unit)}</span>
           <span
@@ -152,9 +151,11 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
                 : 'Forecast high (no observations yet today)'
             }
           >
-            <em>{observedHigh != null ? 'High' : 'High (fcst)'}</em> {formatTemp(displayedHigh, unit)}
+            <em>High{observedHigh == null ? ' ?' : ''}</em> {formatTemp(displayedHigh, unit)}
             {showForecastAside && (
-              <span className="fcst-high"> · fcst {formatTemp(forecastHigh, unit)}</span>
+              <span className="fcst-high" title="Multi-model forecast high (8-model median) — shown when different from the observed running high">
+                〜{formatTemp(forecastHigh, unit)}
+              </span>
             )}
           </span>
         </div>

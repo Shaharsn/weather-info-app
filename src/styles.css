@@ -137,6 +137,15 @@ body {
   text-decoration: none; cursor: pointer;
 }
 .row-main .icao:hover { border-color: #3a6df0; color: #cdd9ff; }
+.row-main .ext-links { display: flex; align-items: center; gap: 4px; }
+.row-main .ext-btn {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.4px; color: #8899bb;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+  padding: 1px 5px; border-radius: 5px; text-decoration: none; cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.row-main .ext-btn:hover { border-color: #3a6df0; color: #cdd9ff; }
 .row-main .metric { white-space: nowrap; }
 .row-main .fcst-high { color: var(--muted); font-weight: 400; font-size: 12px; }
 .row-main .metric em {
@@ -146,11 +155,14 @@ body {
 
 .station-line { display: flex; align-items: flex-start; gap: 6px; }
 .station-line > .station-row { flex: 1; min-width: 0; }
+/* Fixed-width gutter — always the same width regardless of which icons are active,
+   so all rows align identically. Icons sit in a row with the clock always leftmost. */
 .peak-marker {
-  flex: 0 0 22px; display: flex; flex-direction: column; align-items: center;
-  gap: 2px; padding-top: 9px;
+  flex: 0 0 var(--gutter); display: flex; flex-direction: row; align-items: flex-start;
+  gap: 2px; padding-top: 9px; flex-shrink: 0;
 }
-.peak-flag { cursor: help; font-size: 14px; line-height: 1; }
+.peak-flags { display: flex; flex-direction: column; gap: 2px; }
+.peak-flag { cursor: help; font-size: 12px; line-height: 1; }
 .watch-btn {
   cursor: pointer; font-size: 14px; line-height: 1; position: relative;
   background: none; border: 1px solid transparent; border-radius: 8px;
