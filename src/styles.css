@@ -10,7 +10,7 @@
   --cold: #62a8ff;
   --warm-badge: #ffd479;
   --observed: #7ee0a0;
-  --gutter: 58px; /* peak-clock gutter (20px flag slot + 26px clock + 6px gap + 6px station-line gap) */
+  --gutter: 54px; /* peak-clock gutter (22px flag + 2px gap + 24px clock + 6px station-line gap) */
 }
 
 * { box-sizing: border-box; }
@@ -153,21 +153,27 @@ body {
 
 .station-line { display: flex; align-items: flex-start; gap: 6px; }
 .station-line > .station-row { flex: 1; min-width: 0; }
-/* Two fixed-width slots side by side — status icon (left) + clock (right).
-   Both slots are always the same width whether or not they contain an icon,
-   so every card's left edge is pixel-perfect regardless of which icons show. */
+/* Left gutter: two fixed-size boxes side-by-side.
+   Each box is position:relative so the icon is absolutely centred inside —
+   emoji rendering variance (different glyph widths) cannot shift anything. */
 .peak-marker {
   display: flex; flex-direction: row; align-items: flex-start;
-  gap: 3px; padding-top: 9px; flex-shrink: 0;
+  gap: 2px; padding-top: 8px; flex-shrink: 0;
 }
 .peak-flag-slot {
-  width: 20px; flex-shrink: 0; display: flex; justify-content: center;
+  position: relative; width: 22px; height: 22px; flex-shrink: 0;
 }
-.peak-flag { cursor: help; font-size: 13px; line-height: 1; }
+.peak-flag {
+  position: absolute; inset: 0; display: flex;
+  align-items: center; justify-content: center;
+  font-size: 13px; line-height: 1; cursor: help;
+}
 .watch-btn {
   cursor: pointer; font-size: 14px; line-height: 1; position: relative;
+  width: 24px; height: 22px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
   background: none; border: 1px solid transparent; border-radius: 8px;
-  padding: 2px 3px; opacity: 0.4; filter: grayscale(1);
+  padding: 0; opacity: 0.4; filter: grayscale(1);
   transition: opacity 0.15s, filter 0.15s;
 }
 .watch-btn:hover { opacity: 0.9; filter: grayscale(0); }
