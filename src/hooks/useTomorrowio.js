@@ -16,12 +16,14 @@ export const writeTomorrowKey = (k) => {
 
 // How often to fire the sweep ticker (ms). Auto-scales so we never exceed
 // 20 Tomorrow.io calls/hour. One sweep = one call per favourite station.
-// interval = max(30 min, ceil(count / 20) * 60 min)
-// e.g. 10 fav → 30 min; 21 fav → 60 min; 41 fav → 120 min
+// interval = max(3 min per station, 30 min) → ceil up to nearest 30 min.
+// e.g. 5 fav → 30 min (15 min minimum → round up); 10 fav → 30 min;
+//      20 fav → 60 min; 40 fav → 120 min; 46 fav → 138 min → 150 min
 export function sweepIntervalMs(favouriteCount) {
   if (favouriteCount === 0) return 30 * 60 * 1000
-  if (favouriteCount <= 20) return 30 * 60 * 1000
-  return Math.ceil(favouriteCount / 20) * 60 * 60 * 1000
+  // Need interval ≥ count * 3 min to stay ≤ 20/hr. Round up to nearest 30 min.
+  const minMinutes = favouriteCount * 3
+  return Math.ceil(minMinutes / 30) * 30 * 60 * 1000
 }
 
 // Background sweep: fetches Tomorrow.io for favourite stations one at a time,
