@@ -301,3 +301,84 @@ body {
 .tomorrow strong { color: var(--text); }
 .hot-text { color: var(--hot); font-weight: 600; }
 .cold-text { color: var(--cold); font-weight: 600; }
+
+/* ============================================================
+   MOBILE — ≤ 640px
+   Only overrides; all desktop rules remain untouched above.
+   ============================================================ */
+@media (max-width: 640px) {
+
+  /* ── App shell ── */
+  .app { max-width: 100%; padding: 0 8px 32px; }
+
+  /* ── Header: stack title and controls ── */
+  .app-header {
+    padding: 10px 8px 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .controls { width: 100%; justify-content: space-between; }
+  .search { min-width: 0; flex: 1; }
+
+  /* ── Hide the left gutter entirely ── */
+  .peak-marker { display: none; }
+
+  /* ── Row: tight single line ── */
+  .station-line { gap: 0; }
+  .row-main {
+    gap: 8px;
+    padding: 11px 10px;
+    flex-wrap: nowrap;
+  }
+
+  /* ── Inline icons (clock + star) appear before the caret on mobile.
+     On desktop .mobile-inline-icons lives inside the visible .peak-marker gutter
+     and has no styles here, so it is invisible/inert on desktop. ── */
+  .mobile-inline-icons {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+
+  /* ── Hide less-important desktop fields ── */
+  .row-main .station-label { display: none; }
+  .row-main .ext-links { display: none; }
+
+  /* ── City: enough room, no min-width ── */
+  .row-main .city { min-width: 0; flex: 1; font-size: 15px; }
+
+  /* ── Metrics: compact ── */
+  .row-main .metric em { font-size: 10px; margin-right: 3px; }
+  .row-main .metric { font-size: 13px; }
+
+  /* ── Show ext-links inside the expanded strip ── */
+  .hourly-strip .ext-links-mobile {
+    display: flex;
+    gap: 6px;
+    padding: 8px 0 2px;
+    flex-wrap: wrap;
+  }
+
+  /* ── Hourly strip: horizontal scroll ── */
+  .hours-scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+    gap: 6px;
+  }
+  .hour {
+    flex-shrink: 0;
+    min-width: 64px;
+  }
+
+  /* ── Agreement / model chips ── */
+  .agreement { font-size: 12px; }
+  .agreement-sites { gap: 5px; }
+  .vote { font-size: 11px; padding: 3px 7px; }
+
+  /* ── Settings dropdown ── */
+  .settings-dropdown { min-width: 280px; right: 0; left: auto; }
+}
