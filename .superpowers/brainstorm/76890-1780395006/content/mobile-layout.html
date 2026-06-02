@@ -1,0 +1,151 @@
+<h2>Mobile Layout Options</h2>
+<p class="subtitle">Pick the collapsed row style for mobile. All three expand on tap to show the full hourly strip + consensus.</p>
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;justify-content:center;margin-top:16px;">
+
+  <!-- OPTION A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)" style="max-width:320px;min-width:280px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0c0f16;border-radius:10px 10px 0 0;padding:8px 12px;font-family:system-ui;color:#e7ebf3;">
+        <div style="font-size:10px;color:#97a2b6;margin-bottom:6px;border-bottom:1px solid #232c3b;padding-bottom:6px;text-align:center;">▸ city · 🔥 · 🕒</div>
+        <!-- row 1 -->
+        <div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #1a212e;gap:10px;">
+          <span style="font-size:11px;color:#97a2b6;width:16px;">🔥</span>
+          <span style="font-weight:700;flex:1;font-size:15px;">Jeddah</span>
+          <span style="font-size:12px;color:#97a2b6;margin-right:8px;">15:04</span>
+          <span style="font-size:14px;font-weight:600;">35°C</span>
+          <span style="font-size:11px;color:#97a2b6;margin-left:4px;">▸ 36</span>
+        </div>
+        <!-- row 2 -->
+        <div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #1a212e;gap:10px;">
+          <span style="font-size:11px;color:#97a2b6;width:16px;">❄️</span>
+          <span style="font-weight:700;flex:1;font-size:15px;">London</span>
+          <span style="font-size:12px;color:#97a2b6;margin-right:8px;">13:04</span>
+          <span style="font-size:14px;font-weight:600;">22°C</span>
+          <span style="font-size:11px;color:#7ee0a0;margin-left:4px;">▸ 24</span>
+        </div>
+        <!-- row 3 -->
+        <div style="display:flex;align-items:center;padding:10px 0;gap:10px;">
+          <span style="font-size:11px;color:#97a2b6;width:16px;"></span>
+          <span style="font-weight:700;flex:1;font-size:15px;">NYC</span>
+          <span style="font-size:12px;color:#97a2b6;margin-right:8px;">08:04</span>
+          <span style="font-size:14px;font-weight:600;">18°F</span>
+          <span style="font-size:11px;color:#97a2b6;margin-left:4px;">▸ 27</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Option A — Minimal</h3>
+      <p><strong>Icon · City · Local time · Now · High</strong><br>Flag icon left, time in muted grey, Now temp bold, High in accent colour. Very compact — fits ~8 rows on one screen.</p>
+    </div>
+  </div>
+
+  <!-- OPTION B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)" style="max-width:320px;min-width:280px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0c0f16;border-radius:10px 10px 0 0;padding:8px 12px;font-family:system-ui;color:#e7ebf3;">
+        <div style="font-size:10px;color:#97a2b6;margin-bottom:6px;border-bottom:1px solid #232c3b;padding-bottom:6px;text-align:center;">▸ city + station · metrics 2-line</div>
+        <!-- row 1 -->
+        <div style="padding:10px 0;border-bottom:1px solid #1a212e;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+            <span style="font-size:11px;">🔥</span>
+            <span style="font-weight:700;font-size:15px;flex:1;">Jeddah</span>
+            <span style="font-size:11px;color:#97a2b6;">King Abdulaziz</span>
+          </div>
+          <div style="display:flex;gap:16px;padding-left:20px;font-size:12px;">
+            <span><em style="color:#97a2b6;font-style:normal;">15:04</em></span>
+            <span><em style="color:#97a2b6;font-style:normal;">Now</em> <strong>35°C</strong></span>
+            <span><em style="color:#97a2b6;font-style:normal;">High</em> <strong style="color:#7ee0a0;">36°C</strong></span>
+          </div>
+        </div>
+        <!-- row 2 -->
+        <div style="padding:10px 0;border-bottom:1px solid #1a212e;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+            <span style="font-size:11px;">❄️</span>
+            <span style="font-weight:700;font-size:15px;flex:1;">London</span>
+            <span style="font-size:11px;color:#97a2b6;">London City</span>
+          </div>
+          <div style="display:flex;gap:16px;padding-left:20px;font-size:12px;">
+            <span><em style="color:#97a2b6;font-style:normal;">13:04</em></span>
+            <span><em style="color:#97a2b6;font-style:normal;">Now</em> <strong>22°C</strong></span>
+            <span><em style="color:#97a2b6;font-style:normal;">High</em> <strong style="color:#7ee0a0;">24°C</strong></span>
+          </div>
+        </div>
+        <!-- row 3 -->
+        <div style="padding:10px 0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+            <span style="font-size:11px;"></span>
+            <span style="font-weight:700;font-size:15px;flex:1;">NYC</span>
+            <span style="font-size:11px;color:#97a2b6;">LaGuardia</span>
+          </div>
+          <div style="display:flex;gap:16px;padding-left:20px;font-size:12px;">
+            <span><em style="color:#97a2b6;font-style:normal;">08:04</em></span>
+            <span><em style="color:#97a2b6;font-style:normal;">Now</em> <strong>64°F</strong></span>
+            <span><em style="color:#97a2b6;font-style:normal;">High</em> <strong style="color:#7ee0a0;">80°F</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Option B — 2-line</h3>
+      <p><strong>City + station name / time · Now · High</strong><br>First line: city bold + station muted. Second line: labelled metrics. More info visible but each row is taller (~5–6 rows per screen).</p>
+    </div>
+  </div>
+
+  <!-- OPTION C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)" style="max-width:320px;min-width:280px;">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0c0f16;border-radius:10px 10px 0 0;padding:8px 12px;font-family:system-ui;color:#e7ebf3;">
+        <div style="font-size:10px;color:#97a2b6;margin-bottom:6px;border-bottom:1px solid #232c3b;padding-bottom:6px;text-align:center;">▸ city · NOW large · high small</div>
+        <!-- row 1 -->
+        <div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #1a212e;gap:10px;">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:baseline;gap:6px;">
+              <span style="font-weight:700;font-size:16px;">Jeddah</span>
+              <span style="font-size:10px;color:#97a2b6;">15:04</span>
+              <span style="font-size:10px;">🔥</span>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:22px;font-weight:700;line-height:1;">35°C</div>
+            <div style="font-size:10px;color:#7ee0a0;">High 36°C</div>
+          </div>
+        </div>
+        <!-- row 2 -->
+        <div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #1a212e;gap:10px;">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:baseline;gap:6px;">
+              <span style="font-weight:700;font-size:16px;">London</span>
+              <span style="font-size:10px;color:#97a2b6;">13:04</span>
+              <span style="font-size:10px;">❄️</span>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:22px;font-weight:700;line-height:1;">22°C</div>
+            <div style="font-size:10px;color:#7ee0a0;">High 24°C</div>
+          </div>
+        </div>
+        <!-- row 3 -->
+        <div style="display:flex;align-items:center;padding:10px 0;gap:10px;">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:baseline;gap:6px;">
+              <span style="font-weight:700;font-size:16px;">NYC</span>
+              <span style="font-size:10px;color:#97a2b6;">08:04</span>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:22px;font-weight:700;line-height:1;">64°F</div>
+            <div style="font-size:10px;color:#97a2b6;">High 80°F</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Option C — Temperature-first</h3>
+      <p><strong>City + time left, large NOW temp right, small High below</strong><br>Temperature is the most important number — it's the biggest element. Weather-app style. Clean and fast to scan.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:20px;text-align:center;">All options: tap row → expands to full hourly strip + model consensus (same as desktop). Gutter icons (🔥❄️🕒⭐) move inline. ICAO/UV/WC links stay in expanded view only.</p>
