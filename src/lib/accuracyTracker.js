@@ -9,6 +9,7 @@
 //     This reveals whether a station systematically rounds up or down.
 
 import { MODELS } from '../api/ensemble.js'
+import { readTomorrowCache } from './tomorrowCache.js'
 
 const INTERVAL_MS = 60 * 60 * 1000 // every hour
 const DONE_KEY = 'accuracy-logged-hours' // { 'city:YYYY-MM-DD:HH': true }
@@ -65,9 +66,16 @@ async function checkStation(row, date, hour) {
   try {
     models = await fetchModelHighs(row.lat, row.lon)
   } catch {
-    return // rate-limited or offline; skip this tick
+    return
   }
   if (!models.length) return
+
+  // If Tomorrow.io has been fetched for this station (it's a favourite), add it
+  // as a named model so its accuracy gets tracked alongside the 8 global models.
+  const tCache = readTomorrowCache(row.lat, row.lon, Date.now())
+  if (tCache?.highC != null) {
+    models = [...models, { name: 'Tomorrow.io', highC: tCache.highC }]
+  }
 
   const scored = models.map((m) => {
     const roundedForecast = Math.round(m.highC)
