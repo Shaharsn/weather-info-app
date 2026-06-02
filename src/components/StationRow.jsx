@@ -47,8 +47,10 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
   // station's ICAO and WU country code.
   const wuCountry = row.wuCode?.split(':')?.[2]?.toLowerCase() ?? null
   const wuStation = row.icao ?? row.wuCode?.split(':')?.[0] ?? null
+  // Use the /history/daily/ format — this is the actual resolution page Polymarket
+  // links to (shows the final recorded daily high), not the /hourly/ live view.
   const wuUrl = wuCountry && wuStation
-    ? `https://www.wunderground.com/hourly/${wuCountry}/${slug}/${wuStation}`
+    ? `https://www.wunderground.com/history/daily/${wuCountry}/${slug}/${wuStation}`
     : null
   const weatherComUrl = row.wcId
     ? `https://weather.com/weather/today/l/${row.wcId}`
@@ -149,12 +151,13 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
             ) : (
               !row.hasObs && <span className="badge">no station obs</span>
             )}
-            {row.polyResolutionUrl ? (
+            {row.polyResolutionUrl && (
               <a className="ext-btn" href={row.polyResolutionUrl} target="_blank" rel="noopener noreferrer"
                 title="Polymarket resolution page (weather.gov)">NWS</a>
-            ) : wuUrl ? (
+            )}
+            {wuUrl && (
               <a className="ext-btn" href={wuUrl} target="_blank" rel="noopener noreferrer" title="Open on Wunderground">UV</a>
-            ) : null}
+            )}
             {weatherComUrl && (
               <a className="ext-btn" href={weatherComUrl} target="_blank" rel="noopener noreferrer" title="Open on weather.com">WC</a>
             )}
