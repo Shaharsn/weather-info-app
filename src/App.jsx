@@ -12,28 +12,42 @@ export default function App() {
   const { rows, status, lastUpdated, forecastError, forecastStaleSince, refresh, notifyCities, toggleNotify } =
     useWeather(STATIONS)
   const [query, setQuery] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
   const accuracyScores = useAccuracyData()
   const { favourites, toggleFavourite } = useFavourites()
-  const [tomorrowKey, setTomorrowKey] = useState(readTomorrowKey)
-  const [tomorrowStatus, setTomorrowStatus] = useState('')
-  useTomorrowio(STATIONS, favourites) // { city: { modelName: { exactPct, weight, … } } }
+  useTomorrowio(STATIONS, favourites)
   const rowsRef = useRef(rows)
   rowsRef.current = rows
-  // Hourly accuracy check: compare each model's predicted daily high to the
-  // METAR observed high and append to model-accuracy.jsonl.
+
   useEffect(() => {
     const tick = () => runAccuracyCheck(rowsRef.current)
-    tick() // run once on mount
+    tick()
     const t = setInterval(tick, 60 * 60 * 1000)
     return () => clearInterval(t)
   }, [])
-  const saveTomorrow = () => { writeTomorrowKey(tomorrowKey); setTomorrowStatus(tomorrowKey.trim() ? 'Saved.' : 'Cleared.') }
 
-  const [slackOpen, setSlackOpen] = useState(false)
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await refresh()
+    setRefreshing(false)
+  }
+
+  // Settings panel state
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const settingsRef = useRef(null)
+
+  // Close settings when clicking outside
+  useEffect(() => {
+    if (!settingsOpen) return
+    const close = (e) => { if (!settingsRef.current?.contains(e.target)) setSettingsOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [settingsOpen])
+
+  // Slack
   const [slackToken, setSlackToken] = useState(() => readSlackConfig().token)
   const [slackChannel, setSlackChannel] = useState(() => readSlackConfig().channel)
   const [slackStatus, setSlackStatus] = useState('')
-
   const saveSlack = () => {
     writeSlackConfig({ token: slackToken, channel: slackChannel })
     setSlackStatus(slackToken.trim() && slackChannel.trim() ? 'Saved.' : 'Cleared.')
@@ -44,12 +58,19 @@ export default function App() {
     setSlackStatus(ok ? 'Sent — check Slack.' : 'Failed — check token and channel ID.')
   }
 
+  // Tomorrow.io
+  const [tomorrowKey, setTomorrowKey] = useState(readTomorrowKey)
+  const [tomorrowStatus, setTomorrowStatus] = useState('')
+  const saveTomorrow = () => {
+    writeTomorrowKey(tomorrowKey)
+    setTomorrowStatus(tomorrowKey.trim() ? 'Saved.' : 'Cleared.')
+  }
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     const matched = q
       ? rows.filter((r) => `${r.city} ${r.stationLabel}`.toLowerCase().includes(q))
       : rows
-    // Order by each place's current local time (earliest clock first), then city.
     return [...matched].sort(
       (a, b) => (a.localTime || '').localeCompare(b.localTime || '') || a.city.localeCompare(b.city),
     )
@@ -71,46 +92,72 @@ export default function App() {
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Search places"
           />
-          <button onClick={refresh} aria-label="refresh">Refresh</button>
-          <button onClick={() => setSlackOpen((o) => !o)} aria-expanded={slackOpen}>Slack</button>
+          <button
+            className={`refresh-btn${refreshing ? ' spinning' : ''}`}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            aria-label="Refresh all data"
+            title="Refresh all data now"
+          >
+            ↻
+          </button>
+          <div className="settings-wrap" ref={settingsRef}>
+            <button
+              className={`settings-btn${settingsOpen ? ' open' : ''}`}
+              onClick={() => setSettingsOpen((o) => !o)}
+              aria-label="Settings"
+              title="Settings"
+            >
+              ⚙
+            </button>
+            {settingsOpen && (
+              <div className="settings-dropdown">
+                <div className="settings-section">
+                  <div className="settings-label">Tomorrow.io</div>
+                  <div className="settings-row">
+                    <input
+                      className="settings-input"
+                      type="password"
+                      placeholder="API key"
+                      value={tomorrowKey}
+                      onChange={(e) => setTomorrowKey(e.target.value)}
+                      aria-label="Tomorrow.io API key"
+                    />
+                    <button className="settings-save" onClick={saveTomorrow}>Save</button>
+                  </div>
+                  {tomorrowStatus && <span className="settings-status">{tomorrowStatus}</span>}
+                </div>
+                <div className="settings-divider" />
+                <div className="settings-section">
+                  <div className="settings-label">Slack alerts</div>
+                  <div className="settings-row">
+                    <input
+                      className="settings-input"
+                      type="password"
+                      placeholder="Bot token (xoxb-…)"
+                      value={slackToken}
+                      onChange={(e) => setSlackToken(e.target.value)}
+                      aria-label="Slack bot token"
+                    />
+                  </div>
+                  <div className="settings-row">
+                    <input
+                      className="settings-input settings-input-short"
+                      type="text"
+                      placeholder="Channel ID (D…)"
+                      value={slackChannel}
+                      onChange={(e) => setSlackChannel(e.target.value)}
+                      aria-label="Slack channel ID"
+                    />
+                    <button className="settings-save" onClick={saveSlack}>Save</button>
+                    <button className="settings-save" onClick={testSlack} disabled={!slackToken.trim() || !slackChannel.trim()}>Test</button>
+                  </div>
+                  {slackStatus && <span className="settings-status">{slackStatus}</span>}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        {slackOpen && (
-          <div className="slack-settings">
-            <input
-              className="slack-input"
-              type="password"
-              placeholder="Tomorrow.io API key"
-              value={tomorrowKey}
-              onChange={(e) => setTomorrowKey(e.target.value)}
-              aria-label="Tomorrow.io API key"
-            />
-            <button onClick={saveTomorrow}>Save</button>
-            {tomorrowStatus && <span className="slack-status">{tomorrowStatus}</span>}
-          </div>
-        )}
-        {slackOpen && (
-          <div className="slack-settings">
-            <input
-              className="slack-input"
-              type="password"
-              placeholder="Bot token (xoxb-…)"
-              value={slackToken}
-              onChange={(e) => setSlackToken(e.target.value)}
-              aria-label="Slack bot token"
-            />
-            <input
-              className="slack-input slack-input-short"
-              type="text"
-              placeholder="Channel ID (D…)"
-              value={slackChannel}
-              onChange={(e) => setSlackChannel(e.target.value)}
-              aria-label="Slack channel ID"
-            />
-            <button onClick={saveSlack}>Save</button>
-            <button onClick={testSlack} disabled={!slackToken.trim() || !slackChannel.trim()}>Test</button>
-            {slackStatus && <span className="slack-status">{slackStatus}</span>}
-          </div>
-        )}
       </header>
 
       {status === 'loading' && rows.length === 0 && <p className="notice">Loading…</p>}
@@ -119,14 +166,13 @@ export default function App() {
       )}
       {status === 'ready' && forecastStaleSince && (
         <p className="notice warn">
-          Live forecast temporarily unavailable (rate-limited) — showing the cached forecast from{' '}
-          {forecastStaleSince.toLocaleTimeString()}. Current temps and local times are live.
+          Live forecast temporarily unavailable — showing cached forecast from{' '}
+          {forecastStaleSince.toLocaleTimeString()}. Current temps are live.
         </p>
       )}
       {status === 'ready' && forecastError && (
         <p className="notice warn">
-          Forecast unavailable right now (the forecast service may be rate-limited) — showing
-          current temperatures and local times only. Try Refresh again in a minute.
+          Forecast unavailable (rate-limited) — showing current temperatures only. Try Refresh in a minute.
         </p>
       )}
 
@@ -143,7 +189,7 @@ export default function App() {
           />
         ))}
         {rows.length > 0 && filtered.length === 0 && (
-          <p className="notice">No places match “{query}”.</p>
+          <p className="notice">No places match "{query}".</p>
         )}
       </div>
     </div>
