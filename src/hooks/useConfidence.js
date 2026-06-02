@@ -6,6 +6,11 @@ import {
   readEnsembleCache as defaultRead,
   writeEnsembleCache as defaultWrite,
 } from '../lib/ensembleCache.js'
+import { readTomorrowCache } from '../lib/tomorrowCache.js'
+
+// Tomorrow.io gets a pre-set premium weight — it's ML-calibrated at 1km,
+// meaningfully better than raw 25km global models.
+const TOMORROW_WEIGHT = 1.5
 
 // Lazily get the multi-model ensemble for ONE station (only once the row is
 // expanded) and compute the consensus high + agreement. Uses a short browser
@@ -28,12 +33,21 @@ export function useConfidence(target, enabled, deps = {}) {
     let cancelled = false
 
     const settle = (models) => {
-      // Build weight map from accuracy log: { modelName: weight }
-      const modelWeights = Object.fromEntries(
-        Object.entries(target.modelWeights ?? {}).map(([name, s]) => [name, s.weight ?? 1.0]),
-      )
-      const agreement = computeAgreement(models, target.reportsTenths, modelWeights)
-      if (!cancelled) setState({ status: agreement ? 'ready' : 'unavailable', agreement, models })
+      // Inject Tomorrow.io from the background cache if it has been fetched for this station.
+      const tCache = readTomorrowCache(target.lat, target.lon, nowMs())
+      const allModels = tCache?.highC != null
+        ? [...models, { name: 'Tomorrow.io', highC: tCache.highC, hourly: tCache.hourly ?? {} }]
+        : models
+
+      // Build weight map: accuracy-log weights + Tomorrow.io premium weight.
+      const modelWeights = {
+        'Tomorrow.io': TOMORROW_WEIGHT,
+        ...Object.fromEntries(
+          Object.entries(target.modelWeights ?? {}).map(([name, s]) => [name, s.weight ?? 1.0]),
+        ),
+      }
+      const agreement = computeAgreement(allModels, target.reportsTenths, modelWeights)
+      if (!cancelled) setState({ status: agreement ? 'ready' : 'unavailable', agreement, models: allModels })
     }
 
     const cached = readCache(target.lat, target.lon, nowMs())

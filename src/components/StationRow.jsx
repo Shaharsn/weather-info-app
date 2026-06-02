@@ -4,7 +4,7 @@ import { useConfidence } from '../hooks/useConfidence.js'
 import { useWunderground } from '../hooks/useWunderground.js'
 import HourlyStrip from './HourlyStrip.jsx'
 
-export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified = false, onToggleNotify, cityAccuracy = {} }) {
+export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified = false, onToggleNotify, isFavourite = false, onToggleFavourite, cityAccuracy = {} }) {
   const [open, setOpen] = useState(false)
   // Show only the unit the market resolves in: °F for US (tenths) stations,
   // °C for the rest — so there's no cross-unit confusion.
@@ -78,6 +78,15 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
       >
         🕒
         {isNotified && <span className="notify-dot">🔔</span>}
+      </button>
+      <button
+        type="button"
+        className={`fav-btn${isFavourite ? ' active' : ''}`}
+        aria-pressed={isFavourite}
+        title={isFavourite ? 'Favourite — Tomorrow.io fetches for this city. Click to remove.' : 'Mark as favourite to get Tomorrow.io forecasts'}
+        onClick={(e) => { e.stopPropagation(); onToggleFavourite?.() }}
+      >
+        {isFavourite ? '★' : '☆'}
       </button>
     </div>
   )

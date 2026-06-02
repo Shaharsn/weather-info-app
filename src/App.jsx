@@ -5,12 +5,18 @@ import StationRow from './components/StationRow.jsx'
 import { readSlackConfig, writeSlackConfig, sendSlack } from './lib/slack.js'
 import { runAccuracyCheck } from './lib/accuracyTracker.js'
 import { useAccuracyData } from './hooks/useAccuracyData.js'
+import { useFavourites } from './hooks/useFavourites.js'
+import { useTomorrowio, readTomorrowKey, writeTomorrowKey } from './hooks/useTomorrowio.js'
 
 export default function App() {
   const { rows, status, lastUpdated, forecastError, forecastStaleSince, refresh, notifyCities, toggleNotify } =
     useWeather(STATIONS)
   const [query, setQuery] = useState('')
-  const accuracyScores = useAccuracyData() // { city: { modelName: { exactPct, weight, … } } }
+  const accuracyScores = useAccuracyData()
+  const { favourites, toggleFavourite } = useFavourites()
+  const [tomorrowKey, setTomorrowKey] = useState(readTomorrowKey)
+  const [tomorrowStatus, setTomorrowStatus] = useState('')
+  useTomorrowio(STATIONS, favourites) // { city: { modelName: { exactPct, weight, … } } }
   const rowsRef = useRef(rows)
   rowsRef.current = rows
   // Hourly accuracy check: compare each model's predicted daily high to the
@@ -21,6 +27,8 @@ export default function App() {
     const t = setInterval(tick, 60 * 60 * 1000)
     return () => clearInterval(t)
   }, [])
+  const saveTomorrow = () => { writeTomorrowKey(tomorrowKey); setTomorrowStatus(tomorrowKey.trim() ? 'Saved.' : 'Cleared.') }
+
   const [slackOpen, setSlackOpen] = useState(false)
   const [slackToken, setSlackToken] = useState(() => readSlackConfig().token)
   const [slackChannel, setSlackChannel] = useState(() => readSlackConfig().channel)
@@ -71,6 +79,20 @@ export default function App() {
             <input
               className="slack-input"
               type="password"
+              placeholder="Tomorrow.io API key"
+              value={tomorrowKey}
+              onChange={(e) => setTomorrowKey(e.target.value)}
+              aria-label="Tomorrow.io API key"
+            />
+            <button onClick={saveTomorrow}>Save</button>
+            {tomorrowStatus && <span className="slack-status">{tomorrowStatus}</span>}
+          </div>
+        )}
+        {slackOpen && (
+          <div className="slack-settings">
+            <input
+              className="slack-input"
+              type="password"
               placeholder="Bot token (xoxb-…)"
               value={slackToken}
               onChange={(e) => setSlackToken(e.target.value)}
@@ -115,6 +137,8 @@ export default function App() {
             row={row}
             isNotified={notifyCities?.has(row.city) ?? false}
             onToggleNotify={() => toggleNotify?.(row.city)}
+            isFavourite={favourites.has(row.city)}
+            onToggleFavourite={() => toggleFavourite(row.city)}
             cityAccuracy={accuracyScores[row.city] ?? {}}
           />
         ))}
