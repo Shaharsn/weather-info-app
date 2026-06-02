@@ -62,14 +62,14 @@ body {
 .controls .icon-btn { padding: 6px 9px; font-size: 15px; line-height: 1; }
 
 /* Refresh button with spinning animation */
-.refresh-btn { padding: 6px 11px; font-size: 18px; line-height: 1; }
+.refresh-btn { padding: 8px 14px; font-size: 22px; line-height: 1; }
 .refresh-btn.spinning { animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Settings gear + dropdown */
 .settings-wrap { position: relative; }
 .settings-btn {
-  padding: 6px 10px; font-size: 16px; line-height: 1;
+  padding: 8px 13px; font-size: 20px; line-height: 1;
   border-radius: 9px; border: 1px solid var(--border);
   background: var(--panel-2); color: inherit; cursor: pointer;
   transition: background 0.15s, transform 0.2s;
