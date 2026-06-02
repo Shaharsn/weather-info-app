@@ -179,6 +179,10 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
             unit={unit}
             selected={selected}
             onSelect={(t) => setSelected((cur) => (cur === t ? null : t))}
+            icaoUrl={row.icao ? `https://aviationweather.gov/api/data/metar?ids=${row.icao}&format=raw&hours=${hoursToday}` : null}
+            icaoCode={row.icao}
+            wuUrl={wuUrl}
+            weatherComUrl={weatherComUrl}
           />
         )}
       </div>

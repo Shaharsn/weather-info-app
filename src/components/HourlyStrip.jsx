@@ -139,7 +139,7 @@ function ensembleHourlyMedian(models) {
   return Object.fromEntries(Object.entries(byHour).map(([t, v]) => [t, med(v)]))
 }
 
-export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = {}, reportsTenths, unit = 'both', selected, onSelect }) {
+export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = {}, reportsTenths, unit = 'both', selected, onSelect, icaoUrl = null, icaoCode = null, wuUrl = null, weatherComUrl = null }) {
   // Use the ensemble-derived hourly median when available so the card value and
   // the panel's bucket/median always come from the same data source.
   const ensHourly = confidence?.status === 'ready' ? ensembleHourlyMedian(confidence.models) : {}
@@ -187,6 +187,22 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
         <HourDetail card={selectedCard} models={confidence?.models} reportsTenths={reportsTenths} unit={unit} />
       ) : (
         <Agreement confidence={confidence} unit={unit} observedHighC={row.observedHighC} cityAccuracy={cityAccuracy} />
+      )}
+      {(icaoUrl || wuUrl || weatherComUrl) && (
+        <div className="ext-links-mobile">
+          {icaoUrl && (
+            <a className="icao" href={icaoUrl} target="_blank" rel="noopener noreferrer"
+              title={`Raw METAR for ${icaoCode}`}>{icaoCode}</a>
+          )}
+          {wuUrl && (
+            <a className="ext-btn" href={wuUrl} target="_blank" rel="noopener noreferrer"
+              title="Open on Wunderground">UV</a>
+          )}
+          {weatherComUrl && (
+            <a className="ext-btn" href={weatherComUrl} target="_blank" rel="noopener noreferrer"
+              title="Open on weather.com">WC</a>
+          )}
+        </div>
       )}
     </div>
   )
