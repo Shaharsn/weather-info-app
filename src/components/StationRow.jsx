@@ -149,9 +149,12 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
             ) : (
               !row.hasObs && <span className="badge">no station obs</span>
             )}
-            {wuUrl && (
+            {row.polyResolutionUrl ? (
+              <a className="ext-btn" href={row.polyResolutionUrl} target="_blank" rel="noopener noreferrer"
+                title="Polymarket resolution page (weather.gov)">NWS</a>
+            ) : wuUrl ? (
               <a className="ext-btn" href={wuUrl} target="_blank" rel="noopener noreferrer" title="Open on Wunderground">UV</a>
-            )}
+            ) : null}
             {weatherComUrl && (
               <a className="ext-btn" href={weatherComUrl} target="_blank" rel="noopener noreferrer" title="Open on weather.com">WC</a>
             )}
