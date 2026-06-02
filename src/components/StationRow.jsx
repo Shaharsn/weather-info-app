@@ -46,8 +46,9 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
   // External links: WU (wunderground.com) and weather.com, derived from the
   // station's ICAO and WU country code.
   const wuCountry = row.wuCode?.split(':')?.[2]?.toLowerCase() ?? null
-  const wuUrl = wuCountry && row.icao
-    ? `https://www.wunderground.com/hourly/${wuCountry}/${slug}/${row.icao}`
+  const wuStation = row.icao ?? row.wuCode?.split(':')?.[0] ?? null
+  const wuUrl = wuCountry && wuStation
+    ? `https://www.wunderground.com/hourly/${wuCountry}/${slug}/${wuStation}`
     : null
   const weatherComUrl = row.wcId
     ? `https://weather.com/weather/today/l/${row.wcId}`
