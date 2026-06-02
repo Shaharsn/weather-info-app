@@ -1,5 +1,5 @@
 node_modules
-dist
+# dist committed so Vercel deploys the pre-built output (avoids npm hang bug on their servers)
 .DS_Store
 *.local
 model-accuracy.jsonl
