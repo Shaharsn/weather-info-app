@@ -160,7 +160,7 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
       {row.now?.source === 'metar' && row.now.obsTime != null && (
         <div className="obs-time">Observed at {obsTimeLabel(row.now.obsTime)}</div>
       )}
-      <div className="hours">
+      <div className="hours hours-scroll">
         {resolvedHourly.map((h) => {
           const hot = spread && h.tempC === max
           const cold = spread && h.tempC === min
