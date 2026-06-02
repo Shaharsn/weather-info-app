@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { formatTemp } from '../lib/units.js'
 import { computeAgreement } from '../lib/agreement.js'
 
@@ -155,12 +156,24 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
   const spread = max !== min
   const selectedCard = selected ? resolvedHourly.find((h) => h.time === selected) : null
 
+  // Scroll the hours container to the current-hour card on mount so the user
+  // sees now/recent hours instead of always starting at 00:00.
+  const scrollRef = useRef(null)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const nowCard = el.querySelector('.hour.now, .hour.pending')
+    // Fall back to the last observed card if no now/pending card exists.
+    const target = nowCard ?? el.querySelectorAll('.hour.observed')[el.querySelectorAll('.hour.observed').length - 1]
+    if (target) target.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'instant' })
+  }, [])
+
   return (
     <div className="hourly-strip">
       {row.now?.source === 'metar' && row.now.obsTime != null && (
         <div className="obs-time">Observed at {obsTimeLabel(row.now.obsTime)}</div>
       )}
-      <div className="hours hours-scroll">
+      <div className="hours hours-scroll" ref={scrollRef}>
         {resolvedHourly.map((h) => {
           const hot = spread && h.tempC === max
           const cold = spread && h.tempC === min
