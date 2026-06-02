@@ -11,11 +11,14 @@
 import { MODELS } from '../api/ensemble.js'
 import { readTomorrowCache } from './tomorrowCache.js'
 
-const INTERVAL_MS = 60 * 60 * 1000 // every hour
-const DONE_KEY = 'accuracy-logged-hours' // { 'city:YYYY-MM-DD:HH': true }
+const INTERVAL_MS = 60 * 60 * 1000 // hourly tick (but only writes when peak is locked)
+// v2: dedup per day (not per hour) — one entry per city per day, once the
+// observed peak has been confirmed. The old key 'accuracy-logged-hours' (v1)
+// is intentionally different so stale morning-snapshot guards don't block re-logging.
+const DONE_KEY = 'accuracy-logged-days-v2' // { 'city:YYYY-MM-DD': true }
 
-function loggedKey(city, date, hour) {
-  return `${city}:${date}:${hour}`
+function loggedKey(city, date) {
+  return `${city}:${date}`
 }
 
 function readDone() {
@@ -53,14 +56,21 @@ async function logRecord(record) {
   } catch { /* dev server may be sleeping; ignore */ }
 }
 
-// Compare model predictions to the current observed high and log.
-// Called once per station per hour (guarded by DONE_KEY).
-async function checkStation(row, date, hour) {
-  const key = loggedKey(row.city, date, hour)
-  if (readDone()[key]) return // already logged this station-hour
+// Compare model predictions to the FINAL observed daily high and log.
+// Only fires once the peak is confirmed locked (peakLocked = true), so we're
+// always comparing the forecast to the real final number, not a morning temp.
+// Deduped per city per day — one clean entry per day per station.
+async function checkStation(row, date) {
+  // Only log when the day's high is confirmed in: peak has passed and every
+  // remaining forecast hour is lower. This is the only moment the comparison
+  // is meaningful — earlier would be comparing forecast to a partial reading.
+  if (!row.peakLocked) return
+
+  const key = loggedKey(row.city, date)
+  if (readDone()[key]) return // already logged today for this city
 
   const observedHighC = row.observedHighC
-  if (observedHighC == null || !row.hasObs) return // no observed data yet
+  if (observedHighC == null || !row.hasObs) return
 
   let models
   try {
@@ -107,7 +117,6 @@ async function checkStation(row, date, hour) {
   const record = {
     ts: new Date().toISOString(),
     date,
-    hour,
     city: row.city,
     icao: row.icao,
     observedHighC: +observedHighC.toFixed(2),
@@ -122,15 +131,13 @@ async function checkStation(row, date, hour) {
 
 // Run one pass over all rows — called on the hourly tick.
 export async function runAccuracyCheck(rows) {
-  const now = new Date()
-  const hour = String(now.getUTCHours()).padStart(2, '0')
-  const date = now.toISOString().slice(0, 10)
+  const date = new Date().toISOString().slice(0, 10)
 
   // Fan out in parallel but rate-limit to avoid hammering Open-Meteo (6 at a time).
   const CHUNK = 6
   for (let i = 0; i < rows.length; i += CHUNK) {
     await Promise.all(
-      rows.slice(i, i + CHUNK).map((row) => checkStation(row, date, hour).catch(() => {})),
+      rows.slice(i, i + CHUNK).map((row) => checkStation(row, date).catch(() => {})),
     )
   }
 }
