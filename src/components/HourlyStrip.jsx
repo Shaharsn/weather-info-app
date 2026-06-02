@@ -165,7 +165,7 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
     const nowCard = el.querySelector('.hour.now, .hour.pending')
     // Fall back to the last observed card if no now/pending card exists.
     const target = nowCard ?? el.querySelectorAll('.hour.observed')[el.querySelectorAll('.hour.observed').length - 1]
-    if (target) target.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'instant' })
+    if (target) target.scrollIntoView?.({ block: 'nearest', inline: 'center', behavior: 'instant' })
   }, [])
 
   return (
