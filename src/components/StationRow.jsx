@@ -67,32 +67,25 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
         {row.peakImminent && <span className="peak-flag" title="Today's high is forecast for the next hour — peaking soon">🔥</span>}
         {row.peakLocked && <span className="peak-flag" title="Today's high already happened; every remaining hour is forecast lower — high locked in">❄️</span>}
       </span>
-      <span className="mobile-inline-icons">
-        <button
-          type="button"
-          className={`watch-btn${isNotified ? ' notifying' : ''}${row.isPeakHour ? ' peak' : ''}`}
-          aria-pressed={isNotified}
-          title={
-            isNotified
-              ? 'Notifying on each new observation for this city. Click to stop.'
-              : 'Click to get a notification on each new observation for this city' +
-                (row.isPeakHour ? ' (peak-heat hours now)' : '')
-          }
-          onClick={(e) => { e.stopPropagation(); onToggleNotify?.() }}
-        >
-          🕒
-          {isNotified && <span className="notify-dot">🔔</span>}
-        </button>
-        <button
-          type="button"
-          className={`fav-btn${isFavourite ? ' active' : ''}`}
-          aria-pressed={isFavourite}
-          title={isFavourite ? 'Favourite — Tomorrow.io fetches for this city. Click to remove.' : 'Mark as favourite to get Tomorrow.io forecasts'}
-          onClick={(e) => { e.stopPropagation(); onToggleFavourite?.() }}
-        >
-          {isFavourite ? '★' : '☆'}
-        </button>
-      </span>
+      <button
+        type="button"
+        className={`watch-btn${isNotified ? ' notifying' : ''}${row.isPeakHour ? ' peak' : ''}`}
+        aria-pressed={isNotified}
+        title={isNotified ? 'Notifying on each new observation. Click to stop.' : 'Get a notification on each new observation' + (row.isPeakHour ? ' (peak-heat hours now)' : '')}
+        onClick={(e) => { e.stopPropagation(); onToggleNotify?.() }}
+      >
+        🕒
+        {isNotified && <span className="notify-dot">🔔</span>}
+      </button>
+      <button
+        type="button"
+        className={`fav-btn${isFavourite ? ' active' : ''}`}
+        aria-pressed={isFavourite}
+        title={isFavourite ? 'Favourite — Tomorrow.io fetches here. Click to remove.' : 'Mark as favourite for Tomorrow.io forecasts'}
+        onClick={(e) => { e.stopPropagation(); onToggleFavourite?.() }}
+      >
+        {isFavourite ? '★' : '☆'}
+      </button>
     </div>
   )
 
