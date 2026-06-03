@@ -8,10 +8,9 @@
 //   - rounding bias (was the model's decimal >0.5 but resolved lower? or <0.5 but higher?)
 //     This reveals whether a station systematically rounds up or down.
 
-import { MODELS } from '../api/ensemble.js'
 import { readTomorrowCache } from './tomorrowCache.js'
 
-const INTERVAL_MS = 60 * 60 * 1000 // hourly tick (but only writes when peak is locked)
+const INTERVAL_MS = 60 * 60 * 1000 // hourly tick (only writes once per city per day when peak locked)
 // v2: dedup per day (not per hour) — one entry per city per day, once the
 // observed peak has been confirmed. The old key 'accuracy-logged-hours' (v1)
 // is intentionally different so stale morning-snapshot guards don't block re-logging.
@@ -32,17 +31,6 @@ function markDone(key) {
     if (keys.length > 2000) keys.slice(0, keys.length - 2000).forEach((k) => delete d[k])
     localStorage.setItem(DONE_KEY, JSON.stringify(d))
   } catch { /* ignore */ }
-}
-
-// Fetch the 8-model ensemble daily high for a single station.
-async function fetchModelHighs(lat, lon) {
-  const ids = MODELS.map((m) => m.id).join(',')
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max&forecast_days=1&timezone=auto&models=${ids}`
-  const loc = await (await fetch(url)).json()
-  return MODELS.map((m) => ({
-    name: m.name,
-    highC: loc.daily?.[`temperature_2m_max_${m.id}`]?.[0] ?? null,
-  })).filter((m) => m.highC != null)
 }
 
 // Post one record to the Vite plugin endpoint.
@@ -72,12 +60,11 @@ async function checkStation(row, date) {
   const observedHighC = row.observedHighC
   if (observedHighC == null || !row.hasObs) return
 
-  let models
-  try {
-    models = await fetchModelHighs(row.lat, row.lon)
-  } catch {
-    return
-  }
+  // Use the already-loaded batch model data — no extra API call needed.
+  if (!row.batchModels?.length) return
+  let models = row.batchModels
+    .filter((m) => m.highC != null)
+    .map((m) => ({ name: m.name, highC: m.highC }))
   if (!models.length) return
 
   // If Tomorrow.io has been fetched for this station (it's a favourite), add it

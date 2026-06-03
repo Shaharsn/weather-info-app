@@ -32,13 +32,20 @@ export function parseMetnoTimeseries(timeseries, tz, nowMs) {
     return v.length ? Math.min(...v) : null
   }
 
+  const todayHighC = maxOn(today)
   return {
     utcOffsetSeconds: offset,
     currentC: points.length ? points[0].tempC : null,
-    todayHighC: maxOn(today),
+    todayHighC,
     tomorrowHighC: maxOn(tomorrow),
     tomorrowLowC: minOn(tomorrow),
     hourly: points.map((p) => ({ time: localStr(p.utc), tempC: p.tempC })),
+    // Single-model fallback: expose MET Norway as one chip so batchModels is never null.
+    models: todayHighC != null ? [{
+      name: 'MET Norway',
+      highC: todayHighC,
+      hourly: Object.fromEntries(points.map((p) => [localStr(p.utc), p.tempC])),
+    }] : [],
   }
 }
 

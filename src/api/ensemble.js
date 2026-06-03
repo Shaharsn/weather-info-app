@@ -17,6 +17,10 @@ export const MODELS = [
   { id: 'jma_seamless', name: 'JMA (Japan)' },
   { id: 'meteofrance_seamless', name: 'Météo-France' },
   { id: 'cma_grapes_global', name: 'CMA (China)' },
+  // HRRR: 3km hourly-updated US model — ranks #2 globally for short-range accuracy.
+  // Open-Meteo returns null outside CONUS; parseEnsemble/parseMultiModelForecast
+  // filter missing data, so non-US cities are unaffected (still 8 models).
+  { id: 'hrrr', name: 'HRRR (NOAA)' },
 ]
 
 // Pure: raw multi-model response -> [{ name, highC, hourly: { localTime: tempC } }]

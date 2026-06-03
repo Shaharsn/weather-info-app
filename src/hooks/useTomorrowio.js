@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { fetchTomorrow as defaultFetch } from '../api/tomorrow.js'
 import {
   readTomorrowCache,
@@ -87,4 +87,32 @@ export function useTomorrowio(stations, favourites, deps = {}) {
     return () => clearInterval(timerRef.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favourites])
+
+  // Move a favourite city to the front of the queue and fetch immediately.
+  // Called when a starred row is opened so Tomorrow.io appears within seconds.
+  const prioritize = useCallback((city) => {
+    if (!favourites.has(city)) return
+    const idx = queueRef.current.findIndex((s) => s.city === city)
+    if (idx > 0) {
+      const [s] = queueRef.current.splice(idx, 1)
+      queueRef.current.unshift(s)
+      indexRef.current = 0
+    } else if (idx === -1) {
+      // City not in queue (already cached or not a station) — nothing to do
+      return
+    }
+    // Trigger immediate fetch outside the interval
+    const key = readTomorrowKey()
+    if (!key) return
+    const s = queueRef.current[0]
+    if (!s) return
+    const now = Date.now()
+    if (readTomorrowCache(s.lat, s.lon, now)) return // already fresh
+    fetchT(s.lat, s.lon, s.tz, key)
+      .then((result) => { if (result) writeTomorrowCache(s.lat, s.lon, result, Date.now()) })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favourites])
+
+  return { prioritize }
 }

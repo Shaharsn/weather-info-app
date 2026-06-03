@@ -9,7 +9,7 @@ import {
 import { readTomorrowCache } from '../lib/tomorrowCache.js'
 
 const TOMORROW_WEIGHT = 1.5
-const RETRY_DELAY_MS = 60 * 1000 // auto-retry after 60s when Open-Meteo is rate-limited
+const RETRY_DELAY_MS = 5 * 60 * 1000 // retry after 5 min — per-station fallback is rare after A1 fix
 
 export function useConfidence(target, enabled, deps = {}) {
   const fetchEnsemble = deps.fetchStationEnsemble ?? defaultFetch

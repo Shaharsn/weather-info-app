@@ -18,17 +18,22 @@ export const FORECAST_MODEL = 'ecmwf_ifs025'
 // MET Norway's parser returns this same shape, so the merge layer is provider-agnostic.
 export function parseForecast(raw) {
   const arr = Array.isArray(raw) ? raw : [raw]
-  return arr.map((loc) => ({
-    utcOffsetSeconds: loc.utc_offset_seconds,
-    currentC: loc.current?.temperature_2m ?? null,
-    todayHighC: loc.daily?.temperature_2m_max?.[0] ?? null,
-    tomorrowHighC: loc.daily?.temperature_2m_max?.[1] ?? null,
-    tomorrowLowC: loc.daily?.temperature_2m_min?.[1] ?? null,
-    hourly: (loc.hourly?.time ?? []).map((t, i) => ({
-      time: t,
-      tempC: loc.hourly.temperature_2m[i],
-    })),
-  }))
+  return arr.map((loc) => {
+    const times = loc.hourly?.time ?? []
+    const temps = loc.hourly?.temperature_2m ?? []
+    const hourly = times.map((t, i) => ({ time: t, tempC: temps[i] }))
+    const highC = loc.daily?.temperature_2m_max?.[0] ?? null
+    return {
+      utcOffsetSeconds: loc.utc_offset_seconds,
+      currentC: loc.current?.temperature_2m ?? null,
+      todayHighC: highC,
+      tomorrowHighC: loc.daily?.temperature_2m_max?.[1] ?? null,
+      tomorrowLowC: loc.daily?.temperature_2m_min?.[1] ?? null,
+      hourly,
+      // Single-model fallback: expose ECMWF as one chip so batchModels is never null.
+      models: highC != null ? [{ name: 'ECMWF', highC, hourly: Object.fromEntries(times.map((t, i) => [t, temps[i]]).filter(([, v]) => typeof v === 'number')) }] : [],
+    }
+  })
 }
 
 // Open-Meteo: all stations in one batched call (comma-separated coords -> array).

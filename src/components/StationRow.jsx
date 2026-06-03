@@ -1,13 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatTemp } from '../lib/units.js'
 import { useConfidence } from '../hooks/useConfidence.js'
 import { useWunderground } from '../hooks/useWunderground.js'
 import HourlyStrip from './HourlyStrip.jsx'
 import TomorrowPopup from './TomorrowPopup.jsx'
 
-export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified = false, onToggleNotify, isFavourite = false, onToggleFavourite, cityAccuracy = {}, consensusAccuracy = null }) {
+export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified = false, onToggleNotify, isFavourite = false, onToggleFavourite, cityAccuracy = {}, consensusAccuracy = null, onPrioritizeTomorrow }) {
   const [open, setOpen] = useState(false)
   const [tomorrowOpen, setTomorrowOpen] = useState(false)
+
+  // When a starred row is opened, push it to the front of the Tomorrow.io queue
+  // so the chip appears within seconds instead of waiting up to 20+ min.
+  useEffect(() => {
+    if (open && isFavourite) onPrioritizeTomorrow?.()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
   // Show only the unit the market resolves in: °F for US (tenths) stations,
   // °C for the rest — so there's no cross-unit confusion.
   const unit = row.reportsTenths ? 'F' : 'C'

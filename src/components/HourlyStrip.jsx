@@ -74,8 +74,8 @@ function Agreement({ confidence, unit, observedHighC, cityAccuracy = {}, isFavou
             <span key={s.name} className={`vote ${s.agrees ? 'agree' : 'disagree'}`}>
               {s.name} {formatTemp(s.highC, unit)} <span className="hd-round">→ {targetLabel(s, unit)}</span>
               {acc && acc.total >= 3 && (
-                <span className="acc-badge" title={`Historical accuracy: ${acc.exactPct}% exact, ${acc.closePct}% within 1° (${acc.total} obs)`}>
-                  {acc.exactPct}%
+                <span className="acc-badge" title={`${acc.exactPct}% exact · avg error ${acc.avgDiff != null ? (acc.avgDiff > 0 ? '+' : '') + acc.avgDiff + '°' : 'n/a'} · ${acc.total} days`}>
+                  {acc.exactPct}%{acc.avgDiff != null && acc.total >= 3 ? ` ${acc.avgDiff > 0 ? '+' : ''}${acc.avgDiff}°` : ''}
                 </span>
               )}
             </span>
@@ -218,10 +218,15 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
     ? Math.max(...Object.values(wuByHour).filter((v) => typeof v === 'number'))
     : null
   const wuResolution = wuObsMax ?? (Number.isFinite(wuAnyMax) ? wuAnyMax : null)
-  // WU's full-day estimate (observed so far + its own forecast for remaining hours)
-  // = IBM Weather Company's prediction for today's high at this exact station.
-  const wuAllVals = wuByHour ? Object.values(wuByHour).filter((v) => typeof v === 'number' && Number.isFinite(v)) : []
-  const wuDayHighC = wuAllVals.length ? Math.max(...wuAllVals) : null
+  // WU's remaining forecast for today (future, non-observed hours only).
+  // Uses only hours that haven't been observed yet so WU is compared to other
+  // models on equal footing — all pure forecasts. The WU observed max is already
+  // shown prominently in the header as the resolution value.
+  const wuForecastVals = row.hourly
+    .filter((h) => !h.observed && wuByHour?.[h.time] != null)
+    .map((h) => wuByHour[h.time])
+    .filter((v) => typeof v === 'number')
+  const wuDayHighC = wuForecastVals.length ? Math.max(...wuForecastVals) : null
 
   return (
     <div className="hourly-strip">

@@ -15,7 +15,7 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false)
   const { modelScores, consensusScores } = useAccuracyData()
   const { favourites, toggleFavourite } = useFavourites()
-  useTomorrowio(STATIONS, favourites)
+  const { prioritize: prioritizeTomorrow } = useTomorrowio(STATIONS, favourites)
   const rowsRef = useRef(rows)
   rowsRef.current = rows
 
@@ -187,6 +187,7 @@ export default function App() {
             onToggleFavourite={() => toggleFavourite(row.city)}
             cityAccuracy={modelScores[row.city] ?? {}}
             consensusAccuracy={consensusScores[row.city] ?? null}
+            onPrioritizeTomorrow={() => prioritizeTomorrow(row.city)}
           />
         ))}
         {rows.length > 0 && filtered.length === 0 && (
