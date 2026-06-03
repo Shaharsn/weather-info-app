@@ -8,16 +8,9 @@ import {
 } from '../lib/ensembleCache.js'
 import { readTomorrowCache } from '../lib/tomorrowCache.js'
 
-// Tomorrow.io gets a pre-set premium weight — it's ML-calibrated at 1km,
-// meaningfully better than raw 25km global models.
 const TOMORROW_WEIGHT = 1.5
+const RETRY_DELAY_MS = 60 * 1000 // auto-retry after 60s when Open-Meteo is rate-limited
 
-// Lazily get the multi-model ensemble for ONE station (only once the row is
-// expanded) and compute the consensus high + agreement. Uses a short browser
-// cache so re-expanding a city or reloading doesn't re-hit Open-Meteo. These are
-// the same models the row's headline forecast is the median of, so the panel and
-// the headline never disagree.
-// target: { lat, lon, reportsTenths }
 export function useConfidence(target, enabled, deps = {}) {
   const fetchEnsemble = deps.fetchStationEnsemble ?? defaultFetch
   const fetchNws = deps.fetchNwsForecast ?? defaultFetchNws
@@ -26,8 +19,10 @@ export function useConfidence(target, enabled, deps = {}) {
   const nowMs = deps.nowMs ?? (() => Date.now())
   const [state, setState] = useState({ status: 'idle', agreement: null, models: [] })
   const started = useRef(false)
-  // Base ensemble models (without Tomorrow.io) kept so the poll can inject T.io later.
   const baseModelsRef = useRef([])
+  // Incrementing this triggers the effect to retry (started must also be false).
+  const [retryCount, setRetryCount] = useState(0)
+  const retryTimer = useRef(null)
 
   const buildState = useCallback((baseModels) => {
     const tCache = readTomorrowCache(target.lat, target.lon, nowMs())
@@ -45,22 +40,29 @@ export function useConfidence(target, enabled, deps = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target.lat, target.lon, target.reportsTenths])
 
-  // Main fetch effect — runs once on first expand.
+  const scheduleRetry = (cancelledRef) => {
+    clearTimeout(retryTimer.current)
+    retryTimer.current = setTimeout(() => {
+      if (!cancelledRef.current) {
+        started.current = false
+        setRetryCount((c) => c + 1)
+      }
+    }, RETRY_DELAY_MS)
+  }
+
+  // Main fetch effect — runs on first expand, then again on each scheduled retry.
   useEffect(() => {
     if (!enabled || started.current || target.lat == null) return
     started.current = true
-    let cancelled = false
+    const cancelledRef = { current: false }
 
     const settle = (models) => {
       baseModelsRef.current = models
-      if (!cancelled) setState(buildState(models))
+      if (!cancelledRef.current) setState(buildState(models))
     }
 
     const cached = readCache(target.lat, target.lon, nowMs())
-    if (cached) {
-      settle(cached)
-      return
-    }
+    if (cached) { settle(cached); return }
 
     setState({ status: 'loading', agreement: null, models: [] })
     Promise.all([
@@ -70,18 +72,24 @@ export function useConfidence(target, enabled, deps = {}) {
       .then(([ensemble, nws]) => {
         const models = [...ensemble, ...(nws ? [nws] : [])]
         if (!models.length) {
-          if (!cancelled) setState({ status: 'unavailable', agreement: null, models: [] })
+          if (!cancelledRef.current) setState({ status: 'unavailable', agreement: null, models: [] })
+          scheduleRetry(cancelledRef)
           return
         }
         writeCache(target.lat, target.lon, models, nowMs())
         settle(models)
       })
       .catch(() => {
-        if (!cancelled) setState({ status: 'unavailable', agreement: null, models: [] })
+        if (cancelledRef.current) return
+        // Prefer stale cache over blank screen — pass nowMs=0 so TTL is ignored.
+        const stale = readCache(target.lat, target.lon, 0)
+        if (stale?.length) { settle(stale); return }
+        setState({ status: 'unavailable', agreement: null, models: [] })
+        scheduleRetry(cancelledRef)
       })
-    return () => { cancelled = true }
+    return () => { cancelledRef.current = true; clearTimeout(retryTimer.current) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled])
+  }, [enabled, retryCount])
 
   // Poll tomorrowCache every 10 s while the row is open so Tomorrow.io appears
   // as soon as the background sweep writes it — even if the row was opened before

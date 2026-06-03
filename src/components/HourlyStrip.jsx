@@ -33,7 +33,7 @@ function Agreement({ confidence, unit, observedHighC, cityAccuracy = {}, isFavou
     return <div className="agreement muted">Checking model agreement…</div>
   }
   if (confidence.status === 'unavailable' || !confidence.agreement) {
-    return <div className="agreement muted">Model agreement unavailable right now. Click an hour for its sources.</div>
+    return <div className="agreement muted">Model agreement unavailable — Open-Meteo rate-limited. Auto-retrying in ~1 min. Click an hour for its sources.</div>
   }
   const a = confidence.agreement
   const hasTomorrow = confidence.models?.some((m) => m.name === 'Tomorrow.io')
