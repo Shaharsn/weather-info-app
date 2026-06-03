@@ -13,7 +13,7 @@ export default function App() {
     useWeather(STATIONS)
   const [query, setQuery] = useState('')
   const [refreshing, setRefreshing] = useState(false)
-  const accuracyScores = useAccuracyData()
+  const { modelScores, consensusScores } = useAccuracyData()
   const { favourites, toggleFavourite } = useFavourites()
   useTomorrowio(STATIONS, favourites)
   const rowsRef = useRef(rows)
@@ -185,7 +185,8 @@ export default function App() {
             onToggleNotify={() => toggleNotify?.(row.city)}
             isFavourite={favourites.has(row.city)}
             onToggleFavourite={() => toggleFavourite(row.city)}
-            cityAccuracy={accuracyScores[row.city] ?? {}}
+            cityAccuracy={modelScores[row.city] ?? {}}
+            consensusAccuracy={consensusScores[row.city] ?? null}
           />
         ))}
         {rows.length > 0 && filtered.length === 0 && (

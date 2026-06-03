@@ -77,6 +77,7 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
     fx?.utcOffsetSeconds ??
     (station.tz ? tzOffsetSeconds(station.tz, new Date(nowEpoch * 1000)) : 0)
   const today = localDateStr(nowEpoch, offset)
+  const tomorrowDate = localDateStr(nowEpoch + 86400, offset)
 
   // Observed hours today, from real METAR history, snapped to the hour. Keep the
   // hour's PEAK reading (not just the latest): a station reporting every ~30 min
@@ -104,6 +105,14 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
       .filter((h) => Number(h.time.slice(11, 13)) >= DAY_START_HOUR)
       .map((h) => h.tempC),
   )
+
+  // Tomorrow's full hourly forecast (multi-model median, same source as today's).
+  // Used by the "+1d" popup — already fetched in the batch, just filtered out of today.
+  const tomorrowHourly = fx
+    ? fx.hourly
+        .filter((h) => h.time.slice(0, 10) === tomorrowDate)
+        .map((h) => ({ time: h.time, tempC: h.tempC }))
+    : []
 
   // Forecast hours today: future hours not already covered by an observation.
   const forecastHours = fx
@@ -174,6 +183,6 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
     forecastHighC: fx ? fx.todayHighC : null, // multi-model forecast high (a projection)
     tomorrowHighC: fx ? fx.tomorrowHighC : null,
     tomorrowLowC: fx ? fx.tomorrowLowC : null,
-    hourly, hasObs, forecastMissing: !fx, error: null,
+    hourly, tomorrowHourly, hasObs, forecastMissing: !fx, error: null,
   }
 }

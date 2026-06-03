@@ -302,6 +302,56 @@ body {
 .hot-text { color: var(--hot); font-weight: 600; }
 .cold-text { color: var(--cold); font-weight: 600; }
 
+/* button inside ext-links needs appearance reset */
+button.ext-btn { appearance: none; }
+
+/* Tomorrow +1d popup overlay */
+.popup-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+.popup-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  padding: 20px 22px; width: min(680px, 90vw); max-height: 80vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.popup-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+}
+.popup-title { font-size: 15px; font-weight: 650; }
+.popup-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 18px; padding: 2px 6px; border-radius: 6px; line-height: 1;
+}
+.popup-close:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+.popup-summary { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+.popup-summary strong { color: var(--text); font-weight: 650; }
+.popup-empty { font-size: 13px; color: var(--muted); padding: 20px 0; text-align: center; }
+.popup-hours { display: flex; flex-wrap: wrap; gap: 7px; }
+.popup-hour {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 9px;
+  padding: 8px 10px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-width: 68px;
+}
+.popup-hour-time { font-size: 11px; color: var(--muted); font-weight: 600; }
+.popup-hour-temp { font-size: 13px; font-weight: 650; }
+.popup-hour.hot .popup-hour-temp { color: var(--hot); }
+.popup-hour.cold .popup-hour-temp { color: var(--cold); }
+
+/* Row-level prediction accuracy badge */
+.acc-row-badge {
+  font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 5px;
+  white-space: nowrap; cursor: help; flex-shrink: 0;
+}
+.acc-row-badge.good { background: rgba(126, 224, 160, 0.15); color: var(--observed); }
+.acc-row-badge.ok   { background: rgba(255, 212, 121, 0.15); color: var(--warm-badge); }
+.acc-row-badge.bad  { background: rgba(255, 122, 112, 0.15); color: var(--hot); }
+
+/* Mobile-only icon strip: clock + star shown inline; hidden on desktop */
+.mobile-icons { display: none; }
+.mobile-icon-flag { font-size: 13px; line-height: 1; cursor: help; }
+
 /* ============================================================
    MOBILE — ≤ 640px
    Only overrides; all desktop rules remain untouched above.
@@ -342,9 +392,15 @@ body {
     flex-shrink: 0;
   }
 
-  /* ── Hide less-important desktop fields ── */
+  /* ── Hide desktop-only fields ── */
   .row-main .station-label { display: none; }
   .row-main .ext-links { display: none; }
+  .row-main .metric-now { display: none; }
+  .row-main .metric-high { display: none; }
+  .row-main .acc-row-badge { display: none; }
+
+  /* ── Clock + star shown inline in row (gutter hidden) ── */
+  .mobile-icons { display: flex; align-items: center; gap: 3px; margin-left: auto; flex-shrink: 0; }
 
   /* ── City: enough room, no min-width ── */
   .row-main .city { min-width: 0; flex: 1; font-size: 15px; }

@@ -50,6 +50,29 @@ export function computeAccuracyScores(entries) {
   return out
 }
 
+// Per-city consensus accuracy: what % of days did the consensus (MODE of rounded
+// model forecasts) match the observed high? Returns { [city]: { exactPct, total } }.
+export function computeConsensusAccuracy(entries) {
+  const raw = {}
+  for (const e of entries) {
+    if (!e.city || !Array.isArray(e.models) || e.roundedObserved == null) continue
+    raw[e.city] ??= { correct: 0, total: 0 }
+    const votes = e.models.map((m) => m.roundedForecast).filter((v) => typeof v === 'number')
+    if (!votes.length) continue
+    const freq = {}
+    for (const v of votes) freq[v] = (freq[v] || 0) + 1
+    const mode = Number(Object.entries(freq).sort((a, b) => b[1] - a[1])[0][0])
+    raw[e.city].total++
+    if (mode === e.roundedObserved) raw[e.city].correct++
+  }
+  return Object.fromEntries(
+    Object.entries(raw).map(([city, s]) => [
+      city,
+      { exactPct: Math.round((s.correct / s.total) * 100), total: s.total },
+    ]),
+  )
+}
+
 // Convenience: get the accuracy map for one city (empty object if no data yet).
 export function cityScores(accuracyMap, city) {
   return accuracyMap?.[city] ?? {}

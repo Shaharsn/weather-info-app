@@ -3,9 +3,11 @@ import { formatTemp } from '../lib/units.js'
 import { useConfidence } from '../hooks/useConfidence.js'
 import { useWunderground } from '../hooks/useWunderground.js'
 import HourlyStrip from './HourlyStrip.jsx'
+import TomorrowPopup from './TomorrowPopup.jsx'
 
-export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified = false, onToggleNotify, isFavourite = false, onToggleFavourite, cityAccuracy = {} }) {
+export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified = false, onToggleNotify, isFavourite = false, onToggleFavourite, cityAccuracy = {}, consensusAccuracy = null }) {
   const [open, setOpen] = useState(false)
+  const [tomorrowOpen, setTomorrowOpen] = useState(false)
   // Show only the unit the market resolves in: °F for US (tenths) stations,
   // °C for the rest — so there's no cross-unit confusion.
   const unit = row.reportsTenths ? 'F' : 'C'
@@ -105,6 +107,10 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
   }
 
   return (
+    <>
+    {tomorrowOpen && (
+      <TomorrowPopup row={row} unit={unit} onClose={() => setTomorrowOpen(false)} />
+    )}
     <div className="station-line">
       {marker}
       <div className="station-row">
@@ -154,11 +160,17 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
             {weatherComUrl && (
               <a className="ext-btn" href={weatherComUrl} target="_blank" rel="noopener noreferrer" title="Open on weather.com">WC</a>
             )}
+            <button
+              type="button"
+              className="ext-btn tmrw-btn"
+              onClick={() => setTomorrowOpen(true)}
+              title={`Tomorrow forecast: H ${row.tomorrowHighC != null ? formatTemp(row.tomorrowHighC, unit) : '—'} · L ${row.tomorrowLowC != null ? formatTemp(row.tomorrowLowC, unit) : '—'}`}
+            >+1d</button>
           </span>
           <span className="metric"><em>Local</em> {row.localTime}</span>
-          <span className="metric"><em>Now</em> {formatTemp(row.now.tempC, unit)}</span>
+          <span className="metric metric-now"><em>Now</em> {formatTemp(row.now.tempC, unit)}</span>
           <span
-            className="metric"
+            className="metric metric-high"
             title={
               observedHigh != null
                 ? 'Observed high so far today — what the market resolves on'
@@ -166,6 +178,41 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
             }
           >
             <em>High</em> {formatTemp(displayedHigh, unit)}
+          </span>
+          {consensusAccuracy && consensusAccuracy.total > 0 && (
+            <span
+              className={`acc-row-badge ${consensusAccuracy.exactPct >= 70 ? 'good' : consensusAccuracy.exactPct >= 50 ? 'ok' : 'bad'}`}
+              title={`Consensus matched METAR high ${consensusAccuracy.exactPct}% of the time (${consensusAccuracy.total} day${consensusAccuracy.total === 1 ? '' : 's'})`}
+            >
+              {consensusAccuracy.exactPct}%&thinsp;·&thinsp;{consensusAccuracy.total}d
+            </span>
+          )}
+          {/* Mobile-only: clock + star inline (peak-marker gutter is hidden on mobile) */}
+          <span className="mobile-icons">
+            {(row.peakImminent || row.peakLocked) && (
+              <span className="mobile-icon-flag" title={row.peakImminent ? 'Peak imminent 🔥' : 'Peak locked ❄️'}>
+                {row.peakImminent ? '🔥' : '❄️'}
+              </span>
+            )}
+            <button
+              type="button"
+              className={`watch-btn${isNotified ? ' notifying' : ''}${row.isPeakHour ? ' peak' : ''}`}
+              aria-pressed={isNotified}
+              title={isNotified ? 'Notifying. Click to stop.' : 'Get a notification on each new observation'}
+              onClick={(e) => { e.stopPropagation(); onToggleNotify?.() }}
+            >
+              🕒
+              {isNotified && <span className="notify-dot">🔔</span>}
+            </button>
+            <button
+              type="button"
+              className={`fav-btn${isFavourite ? ' active' : ''}`}
+              aria-pressed={isFavourite}
+              title={isFavourite ? 'Favourite. Click to remove.' : 'Mark as favourite'}
+              onClick={(e) => { e.stopPropagation(); onToggleFavourite?.() }}
+            >
+              {isFavourite ? '★' : '☆'}
+            </button>
           </span>
         </div>
         {open && (
@@ -186,5 +233,6 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
         )}
       </div>
     </div>
+    </>
   )
 }
