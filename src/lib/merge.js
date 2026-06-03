@@ -193,5 +193,6 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
     tomorrowHighC: fx ? fx.tomorrowHighC : null,
     tomorrowLowC: fx ? fx.tomorrowLowC : null,
     hourly, tomorrowHourly, hasObs, forecastMissing: !fx, error: null,
+    batchModels: fx?.models ?? null, // per-model data from the batch — no extra API needed
   }
 }

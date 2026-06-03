@@ -61,6 +61,14 @@ export function useConfidence(target, enabled, deps = {}) {
       if (!cancelledRef.current) setState(buildState(models))
     }
 
+    // Batch forecast already contains per-model data — use it directly.
+    // This avoids the per-station Open-Meteo call entirely and never hits rate limits.
+    if (target.batchModels?.length) {
+      writeCache(target.lat, target.lon, target.batchModels, nowMs())
+      settle(target.batchModels)
+      return
+    }
+
     const cached = readCache(target.lat, target.lon, nowMs())
     if (cached) { settle(cached); return }
 

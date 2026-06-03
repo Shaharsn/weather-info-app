@@ -65,6 +65,18 @@ export function parseMultiModelForecast(raw) {
       .map((t, i) => ({ time: t, tempC: median(series.map((s) => s[i])) }))
       .filter((h) => h.tempC != null)
     const dayMedian = (field, idx) => median(ids.map((id) => loc.daily?.[`${field}_${id}`]?.[idx]))
+
+    // Per-model breakdown — same shape as fetchStationEnsemble returns.
+    // Storing this alongside the median means useConfidence can use it directly
+    // without making any additional per-station API calls.
+    const models = MODELS.map((m) => {
+      const highC = loc.daily?.[`temperature_2m_max_${m.id}`]?.[0]
+      const temps = loc.hourly?.[`temperature_2m_${m.id}`] ?? []
+      const mHourly = {}
+      times.forEach((t, i) => { if (typeof temps[i] === 'number') mHourly[t] = temps[i] })
+      return { name: m.name, highC: typeof highC === 'number' ? highC : null, hourly: mHourly }
+    }).filter((m) => m.highC != null || Object.keys(m.hourly).length > 0)
+
     return {
       utcOffsetSeconds: loc.utc_offset_seconds,
       currentC: median(ids.map((id) => loc.current?.[`temperature_2m_${id}`])),
@@ -72,6 +84,7 @@ export function parseMultiModelForecast(raw) {
       tomorrowHighC: dayMedian('temperature_2m_max', 1),
       tomorrowLowC: dayMedian('temperature_2m_min', 1),
       hourly,
+      models, // per-model data — piped to rows so chips need no extra API call
     }
   })
 }
