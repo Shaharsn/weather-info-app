@@ -146,7 +146,11 @@ body {
 }
 .row-main:focus-visible { outline: 2px solid #3a6df0; outline-offset: -2px; border-radius: 12px; }
 .row-main:hover { background: rgba(255, 255, 255, 0.02); }
-.row-main .caret { width: 12px; color: var(--muted); }
+.row-main .caret-btn {
+  background: none; border: none; padding: 0; cursor: pointer;
+  width: 12px; color: var(--muted); flex-shrink: 0; line-height: 1;
+  font-size: inherit;
+}
 .row-main .city {
   font-weight: 650; min-width: 120px; cursor: pointer;
   color: inherit; text-decoration: none;
@@ -402,11 +406,23 @@ button.ext-btn { appearance: none; }
   .row-main .metric-high { display: none; }
   .row-main .acc-row-badge { display: none; }
 
+  /* ── Disable whole-row tap: only the caret expands, city opens Polymarket ── */
+  .row-main { pointer-events: none; cursor: default; }
+  .row-main .caret-btn {
+    pointer-events: auto;
+    width: 40px; height: 44px;       /* large touch target */
+    display: flex; align-items: center; justify-content: center;
+    margin-left: -8px;               /* extend into row padding */
+  }
+  .row-main .city { pointer-events: auto; }
+  .row-main .mobile-icons,
+  .row-main .mobile-icons * { pointer-events: auto; }
+
   /* ── Clock + star shown inline in row (gutter hidden) ── */
   .mobile-icons { display: flex; align-items: center; gap: 3px; margin-left: auto; flex-shrink: 0; }
 
-  /* ── City: enough room, no min-width ── */
-  .row-main .city { min-width: 0; flex: 1; font-size: 15px; }
+  /* ── City: natural width (no longer fills whole row) ── */
+  .row-main .city { min-width: 0; flex: none; font-size: 15px; }
 
   /* ── Metrics: compact ── */
   .row-main .metric em { font-size: 10px; margin-right: 3px; }

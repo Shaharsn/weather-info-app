@@ -127,7 +127,13 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
             }
           }}
         >
-          <span className="caret">{open ? '▾' : '▸'}</span>
+          <button
+            type="button"
+            className="caret-btn"
+            aria-expanded={open}
+            aria-label={open ? 'Collapse row' : 'Expand row'}
+            onClick={(e) => { e.stopPropagation(); setOpen((o) => !o) }}
+          >{open ? '▾' : '▸'}</button>
           <a
             className="city"
             href={polymarketUrl}
