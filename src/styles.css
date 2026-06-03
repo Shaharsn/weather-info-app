@@ -230,6 +230,8 @@ body {
 .row-error { color: var(--hot); }
 
 .hourly-strip { padding: 12px 14px 14px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.15); }
+/* hidden on desktop — same links are in the row header; mobile reveals it */
+.hourly-strip .ext-links-mobile { display: none; }
 .obs-time { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
 .hours { display: flex; flex-wrap: wrap; gap: 7px; }
 
