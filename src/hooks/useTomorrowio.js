@@ -74,7 +74,11 @@ export function useTomorrowio(stations, favourites, deps = {}) {
       if (!s) return
 
       const result = await fetchT(s.lat, s.lon, s.tz, key)
-      if (result) writeTomorrowCache(s.lat, s.lon, result, nowMs())
+      if (result) {
+        writeTomorrowCache(s.lat, s.lon, result, nowMs())
+      } else {
+        console.warn('[Tomorrow.io] no result for', s.city, '— check API key in Settings or DevTools for error details')
+      }
     }
 
     // Run once immediately then on interval.

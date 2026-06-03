@@ -221,6 +221,7 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
             confidence={confidence}
             wuByHour={wuByHour}
             cityAccuracy={cityAccuracy}
+            isFavourite={isFavourite}
             reportsTenths={row.reportsTenths}
             unit={unit}
             selected={selected}

@@ -298,6 +298,7 @@ body {
 }
 .vote.agree { border-color: rgba(126, 224, 160, 0.5); color: var(--observed); }
 .vote.disagree { color: var(--muted); opacity: 0.7; }
+.vote.tomorrow-pending { color: var(--muted); opacity: 0.5; font-style: italic; }
 
 .tomorrow { margin-top: 12px; font-size: 13px; color: var(--muted); }
 .tomorrow strong { color: var(--text); }

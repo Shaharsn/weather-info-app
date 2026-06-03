@@ -27,7 +27,7 @@ function ConsensusTarget({ a, unit }) {
 }
 
 // Default view (no hour selected): the multi-model consensus for today's high.
-function Agreement({ confidence, unit, observedHighC, cityAccuracy = {} }) {
+function Agreement({ confidence, unit, observedHighC, cityAccuracy = {}, isFavourite = false }) {
   if (!confidence || confidence.status === 'idle') return null
   if (confidence.status === 'loading') {
     return <div className="agreement muted">Checking model agreement…</div>
@@ -36,13 +36,14 @@ function Agreement({ confidence, unit, observedHighC, cityAccuracy = {} }) {
     return <div className="agreement muted">Model agreement unavailable right now. Click an hour for its sources.</div>
   }
   const a = confidence.agreement
+  const hasTomorrow = confidence.models?.some((m) => m.name === 'Tomorrow.io')
   // Observations have already overtaken the model forecast (models under-called the
   // high) — say so, so the model median doesn't read as if it were the realized high.
   const obsExceeds = observedHighC != null && observedHighC > a.medianC
   return (
     <div className="agreement">
       <div className="agreement-head">
-        Models’ high median {formatTemp(a.medianC, unit)} → <ConsensusTarget a={a} unit={unit} /> ·{' '}
+        Models' high median {formatTemp(a.medianC, unit)} → <ConsensusTarget a={a} unit={unit} /> ·{' '}
         <strong className={`pct ${confidenceClass(a.pct)}`}>
           {a.agree}/{a.total} ({a.pct}%)
         </strong>
@@ -65,6 +66,11 @@ function Agreement({ confidence, unit, observedHighC, cityAccuracy = {} }) {
             </span>
           )
         })}
+        {isFavourite && !hasTomorrow && (
+          <span className="vote tomorrow-pending" title="Tomorrow.io is fetching for this favourite — will appear within a minute. Check Settings if it never shows.">
+            Tomorrow.io ⏳
+          </span>
+        )}
       </div>
     </div>
   )
@@ -140,7 +146,7 @@ function ensembleHourlyMedian(models) {
   return Object.fromEntries(Object.entries(byHour).map(([t, v]) => [t, med(v)]))
 }
 
-export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = {}, reportsTenths, unit = 'both', selected, onSelect, icaoUrl = null, icaoCode = null, wuUrl = null, weatherComUrl = null }) {
+export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = {}, isFavourite = false, reportsTenths, unit = 'both', selected, onSelect, icaoUrl = null, icaoCode = null, wuUrl = null, weatherComUrl = null }) {
   // Use the ensemble-derived hourly median when available so the card value and
   // the panel's bucket/median always come from the same data source.
   const ensHourly = confidence?.status === 'ready' ? ensembleHourlyMedian(confidence.models) : {}
@@ -199,7 +205,7 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
       {selectedCard ? (
         <HourDetail card={selectedCard} models={confidence?.models} reportsTenths={reportsTenths} unit={unit} />
       ) : (
-        <Agreement confidence={confidence} unit={unit} observedHighC={row.observedHighC} cityAccuracy={cityAccuracy} />
+        <Agreement confidence={confidence} unit={unit} observedHighC={row.observedHighC} cityAccuracy={cityAccuracy} isFavourite={isFavourite} />
       )}
       {(icaoUrl || wuUrl || weatherComUrl) && (
         <div className="ext-links-mobile">
