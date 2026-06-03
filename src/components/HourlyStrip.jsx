@@ -81,11 +81,28 @@ function HourDetail({ card, models, reportsTenths, unit }) {
   const time = card.time.slice(11, 16)
 
   if (card.observed) {
+    // Show model predictions alongside METAR so you can see which models hit or missed.
+    const modelRows = (models || [])
+      .map((m) => ({ name: m.name, tempC: m.hourly?.[card.time] }))
+      .filter((r) => typeof r.tempC === 'number')
     return (
       <div className="hour-detail">
-        <div className="hd-head">{time} — Observed (METAR)</div>
+        <div className="hd-head">{time} — Observed (METAR) · model forecasts for comparison</div>
         <div className="hd-rows">
           <span className="hd-row primary">METAR {formatTemp(card.tempC, unit)}</span>
+          {modelRows.map((r) => {
+            const diff = r.tempC - card.tempC
+            const hit = Math.round(r.tempC) === Math.round(card.tempC)
+            return (
+              <span key={r.name} className={`hd-row ${hit ? 'agree' : 'disagree'}`}>
+                {r.name} {formatTemp(r.tempC, unit)}
+                <span className="hd-round"> ({diff >= 0 ? '+' : ''}{diff.toFixed(1)}°)</span>
+              </span>
+            )
+          })}
+          {modelRows.length === 0 && (
+            <span className="hd-row muted">Expand row first to load model data</span>
+          )}
         </div>
       </div>
     )

@@ -161,11 +161,20 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
   // displayed high, not a forecast number the station never reached), "now" is
   // at/below it, and EVERY remaining forecast hour is lower — so the high shown
   // won't be beaten today.
+  //
+  // Intentionally does NOT use fx.todayHighC (the batch model daily max) for the
+  // "is observed ≥ expected?" check — that daily max can overstate (e.g. models
+  // said 30°C for Wuhan but the day peaked at 29°C, so 29 ≥ 30 would never be
+  // true). Instead we compare observed against the max of remaining HOURLY
+  // forecasts, which converges to zero as the day ends and correctly locks when
+  // the forecast overshot.
+  const maxRemainingHourlyC = futureForecastToday.length
+    ? Math.max(...futureForecastToday.map((h) => h.tempC))
+    : null
   const peakLocked =
     fx != null &&
     observedMax != null &&
-    observedMax >= todayHighC &&
-    (now.tempC == null || now.tempC <= observedMax) &&
+    observedMax >= maxDefined(now.tempC, maxRemainingHourlyC) &&
     futureForecastToday.every((h) => h.tempC < observedMax)
 
   return {
