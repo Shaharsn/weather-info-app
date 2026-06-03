@@ -236,7 +236,18 @@ body {
 .hourly-strip { padding: 12px 14px 14px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.15); }
 /* hidden on desktop — same links are in the row header; mobile reveals it */
 .hourly-strip .ext-links-mobile { display: none; }
-.obs-time { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.obs-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px; gap: 12px; flex-wrap: wrap;
+}
+.obs-time { font-size: 12px; color: var(--muted); }
+.wu-resolution {
+  font-size: 12px; color: #c08af0;
+  background: rgba(192, 138, 240, 0.1); border: 1px solid rgba(192, 138, 240, 0.25);
+  padding: 2px 8px; border-radius: 6px;
+}
+.wu-resolution strong { font-weight: 700; }
+.wu-live { color: var(--muted); font-size: 11px; }
 .hours { display: flex; flex-wrap: wrap; gap: 7px; }
 
 .hour {

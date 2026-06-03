@@ -191,11 +191,32 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
     if (target) target.scrollIntoView?.({ block: 'nearest', inline: 'center', behavior: 'instant' })
   }, [])
 
+  // WU observed daily max = peak across hours that already have METAR observations.
+  // This is the running resolution value — what Polymarket will use at end of day.
+  const wuObsVals = row.hourly
+    .filter((h) => h.observed)
+    .map((h) => wuByHour?.[h.time])
+    .filter((v) => typeof v === 'number')
+  const wuObsMax = wuObsVals.length ? Math.max(...wuObsVals) : null
+  // For WU-only stations (no METAR): take the highest WU value across ALL hours.
+  const wuAnyMax = !row.hasObs && wuByHour
+    ? Math.max(...Object.values(wuByHour).filter((v) => typeof v === 'number'))
+    : null
+  const wuResolution = wuObsMax ?? (Number.isFinite(wuAnyMax) ? wuAnyMax : null)
+
   return (
     <div className="hourly-strip">
-      {row.now?.source === 'metar' && row.now.obsTime != null && (
-        <div className="obs-time">Observed at {obsTimeLabel(row.now.obsTime)}</div>
-      )}
+      <div className="obs-header">
+        {row.now?.source === 'metar' && row.now.obsTime != null && (
+          <span className="obs-time">Observed at {obsTimeLabel(row.now.obsTime)}</span>
+        )}
+        {wuResolution != null && (
+          <span className="wu-resolution" title="WU running daily max — this is the value Polymarket resolves on">
+            WU max <strong>{formatTemp(wuResolution, unit)}</strong>
+            {wuByHour && <span className="wu-live"> · live</span>}
+          </span>
+        )}
+      </div>
       <div className="hours hours-scroll" ref={scrollRef}>
         {resolvedHourly.map((h) => {
           const hot = spread && h.tempC === max
