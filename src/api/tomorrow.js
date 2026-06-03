@@ -4,57 +4,55 @@ const BASE = 'https://api.tomorrow.io/v4/timelines'
 
 // Pure: Tomorrow.io /v4/timelines response -> { name, highC, tomorrowHighC, hourly }
 // where hourly is { 'YYYY-MM-DDTHH:00': tempC } matching the card time keys.
+// We only request the `temperature` field at `1h` — temperatureMax/Min are
+// daily-only fields and cause a 400 if combined with the 1h timestep.
+// Daily highs are derived from the hourly data in the station's local timezone.
 export function parseTomorrow(json, tz) {
   const timelines = json?.data?.timelines ?? []
-  const daily = timelines.find((t) => t.timestep === '1d')
   const hourly = timelines.find((t) => t.timestep === '1h')
-  if (!daily && !hourly) return null
+  if (!hourly?.intervals?.length) return null
 
-  // Daily: first interval = today, second = tomorrow.
-  const dayIntervals = daily?.intervals ?? []
-  const todayHighC = dayIntervals[0]?.values?.temperatureMax ?? null
-  const tomorrowHighC = dayIntervals[1]?.values?.temperatureMax ?? null
+  // Today and tomorrow date strings in the station's local timezone.
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz || 'UTC' })
+  const todayStr = fmt.format(new Date())
+  const tomorrowStr = fmt.format(new Date(Date.now() + 86400000))
 
-  // Hourly: snap each interval's startTime to its hour in local time.
-  // startTime is ISO with offset e.g. "2026-06-02T14:00:00-04:00" — slice to hour.
+  // Build hourly map and accumulate per-day highs.
+  // startTime from Tomorrow.io with timezone set is local ISO e.g. "2026-06-03T14:00:00+03:00"
   const hourlyMap = {}
-  for (const iv of hourly?.intervals ?? []) {
-    if (typeof iv.values?.temperature !== 'number') continue
+  let highC = null
+  let tomorrowHighC = null
+
+  for (const iv of hourly.intervals) {
+    const t = iv.values?.temperature
+    if (typeof t !== 'number') continue
+    // Snap to local-time hour key matching merge.js format: 'YYYY-MM-DDTHH:00'
     const key = iv.startTime.slice(0, 13) + ':00'
-    hourlyMap[key] = iv.values.temperature
+    hourlyMap[key] = t
+    const dayStr = iv.startTime.slice(0, 10)
+    if (dayStr === todayStr) highC = highC == null ? t : Math.max(highC, t)
+    else if (dayStr === tomorrowStr) tomorrowHighC = tomorrowHighC == null ? t : Math.max(tomorrowHighC, t)
   }
 
-  // Fallback: if daily temperatureMax wasn't returned, derive today's high from
-  // the hourly temperatures so highC is never null when we have hourly data.
-  const hourlyVals = Object.values(hourlyMap)
-  const highC = todayHighC ?? (hourlyVals.length ? Math.max(...hourlyVals) : null)
+  if (!Object.keys(hourlyMap).length) return null
 
-  return {
-    name: 'Tomorrow.io',
-    highC,
-    tomorrowHighC,
-    hourly: hourlyMap,
-  }
+  return { name: 'Tomorrow.io', highC, tomorrowHighC, hourly: hourlyMap }
 }
 
-// Fetch Today + Tomorrow forecast for one station from Tomorrow.io.
+// Fetch 48-hour hourly forecast for one station from Tomorrow.io.
 // Returns the parsed object or null on failure.
 export async function fetchTomorrow(lat, lon, tz, apiKey, deps = {}) {
   if (!apiKey) return null
   const fetch_ = deps.fetchJson ?? fetchJson
-  // Tomorrow.io requires REPEATED query params for multiple fields/timesteps —
-  // URLSearchParams({fields:'a,b'}) encodes as fields=a%2Cb (wrong); use .append().
+  // Single field + single timestep — no field/timestep mismatch, no 400 errors.
   const params = new URLSearchParams({
     location: `${lat},${lon}`,
     timezone: tz || 'auto',
-    units: 'metric',   // always return °C so values are comparable with other models
+    units: 'metric',
     apikey: apiKey,
   })
   params.append('fields', 'temperature')
-  params.append('fields', 'temperatureMax')
-  params.append('fields', 'temperatureMin')
   params.append('timesteps', '1h')
-  params.append('timesteps', '1d')
   try {
     const json = await fetch_(`${BASE}?${params}`, { timeoutMs: 15000 })
     return parseTomorrow(json, tz)

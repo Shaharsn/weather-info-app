@@ -1,16 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { parseTomorrow } from './tomorrow.js'
 
-const makeResponse = (todayMax, tomorrowMax, hourlyTemps) => ({
+// Build a mock hourly-only response (no daily timeline — matches new API call)
+const makeResponse = (hourlyTemps) => ({
   data: {
     timelines: [
-      {
-        timestep: '1d',
-        intervals: [
-          { startTime: '2026-06-02T00:00:00-04:00', values: { temperatureMax: todayMax } },
-          { startTime: '2026-06-03T00:00:00-04:00', values: { temperatureMax: tomorrowMax } },
-        ],
-      },
       {
         timestep: '1h',
         intervals: Object.entries(hourlyTemps).map(([t, temp]) => ({
@@ -23,20 +17,32 @@ const makeResponse = (todayMax, tomorrowMax, hourlyTemps) => ({
 })
 
 describe('parseTomorrow', () => {
-  it('extracts today high, tomorrow high, and hourly map', () => {
+  it('computes today/tomorrow highs from hourly data', () => {
+    // Use a fixed timezone so the test is deterministic regardless of when it runs.
+    // The tz is passed to Intl.DateTimeFormat — we match startTime dates to it.
+    // Use UTC so today/tomorrow date strings equal the ISO date in startTime.
+    const todayUTC = new Date().toISOString().slice(0, 10)
+    const tomorrowUTC = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+
     const result = parseTomorrow(
-      makeResponse(33.3, 31.5, { '2026-06-02T14:00:00-04:00': 32.1, '2026-06-02T15:00:00-04:00': 33.3 }),
-      'America/New_York',
+      makeResponse({
+        [`${todayUTC}T14:00:00Z`]: 32.1,
+        [`${todayUTC}T15:00:00Z`]: 33.3,
+        [`${tomorrowUTC}T13:00:00Z`]: 31.0,
+        [`${tomorrowUTC}T15:00:00Z`]: 29.5,
+      }),
+      'UTC',
     )
     expect(result.name).toBe('Tomorrow.io')
     expect(result.highC).toBe(33.3)
-    expect(result.tomorrowHighC).toBe(31.5)
-    expect(result.hourly['2026-06-02T14:00']).toBe(32.1)
-    expect(result.hourly['2026-06-02T15:00']).toBe(33.3)
+    expect(result.tomorrowHighC).toBe(31.0)
+    expect(result.hourly[`${todayUTC}T14:00`]).toBe(32.1)
+    expect(result.hourly[`${todayUTC}T15:00`]).toBe(33.3)
   })
 
   it('returns null for empty/invalid response', () => {
     expect(parseTomorrow({}, 'UTC')).toBeNull()
     expect(parseTomorrow(null, 'UTC')).toBeNull()
+    expect(parseTomorrow({ data: { timelines: [] } }, 'UTC')).toBeNull()
   })
 })
