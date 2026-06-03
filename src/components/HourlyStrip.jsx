@@ -27,7 +27,10 @@ function ConsensusTarget({ a, unit }) {
 }
 
 // Default view (no hour selected): the multi-model consensus for today's high.
-function Agreement({ confidence, unit, observedHighC, cityAccuracy = {}, isFavourite = false }) {
+const WU_MODEL_NAME = 'WU (IBM)'
+const WU_WEIGHT = 1.5 // IBM Weather Company calibrated model — treated like Tomorrow.io
+
+function Agreement({ confidence, unit, observedHighC, cityAccuracy = {}, isFavourite = false, wuDayHighC = null, reportsTenths = true }) {
   if (!confidence || confidence.status === 'idle') return null
   if (confidence.status === 'loading') {
     return <div className="agreement muted">Checking model agreement…</div>
@@ -35,10 +38,22 @@ function Agreement({ confidence, unit, observedHighC, cityAccuracy = {}, isFavou
   if (confidence.status === 'unavailable' || !confidence.agreement) {
     return <div className="agreement muted">Model agreement unavailable — Open-Meteo rate-limited. Auto-retrying in ~1 min. Click an hour for its sources.</div>
   }
-  const a = confidence.agreement
-  const hasTomorrow = confidence.models?.some((m) => m.name === 'Tomorrow.io')
-  // Observations have already overtaken the model forecast (models under-called the
-  // high) — say so, so the model median doesn't read as if it were the realized high.
+
+  // Add WU (IBM Weather Company) as a weighted model when its day estimate is available.
+  // WU's own forecast is calibrated against the actual station and is often more
+  // accurate than raw global NWP — especially for coastal stations (Jeddah, Manila, KL).
+  const baseModels = confidence.models || []
+  const allModels = wuDayHighC != null && Number.isFinite(wuDayHighC)
+    ? [...baseModels.filter((m) => m.name !== WU_MODEL_NAME), { name: WU_MODEL_NAME, highC: wuDayHighC }]
+    : baseModels
+  const modelWeights = {
+    [WU_MODEL_NAME]: WU_WEIGHT,
+    ...Object.fromEntries(Object.entries(cityAccuracy).map(([n, s]) => [n, s.weight ?? 1.0])),
+  }
+  // Recompute agreement including WU so it properly affects consensus % and bucket.
+  const a = computeAgreement(allModels, reportsTenths, modelWeights) ?? confidence.agreement
+
+  const hasTomorrow = baseModels.some((m) => m.name === 'Tomorrow.io')
   const obsExceeds = observedHighC != null && observedHighC > a.medianC
   return (
     <div className="agreement">
@@ -203,6 +218,10 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
     ? Math.max(...Object.values(wuByHour).filter((v) => typeof v === 'number'))
     : null
   const wuResolution = wuObsMax ?? (Number.isFinite(wuAnyMax) ? wuAnyMax : null)
+  // WU's full-day estimate (observed so far + its own forecast for remaining hours)
+  // = IBM Weather Company's prediction for today's high at this exact station.
+  const wuAllVals = wuByHour ? Object.values(wuByHour).filter((v) => typeof v === 'number' && Number.isFinite(v)) : []
+  const wuDayHighC = wuAllVals.length ? Math.max(...wuAllVals) : null
 
   return (
     <div className="hourly-strip">
@@ -243,7 +262,7 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
       {selectedCard ? (
         <HourDetail card={selectedCard} models={confidence?.models} reportsTenths={reportsTenths} unit={unit} />
       ) : (
-        <Agreement confidence={confidence} unit={unit} observedHighC={row.observedHighC} cityAccuracy={cityAccuracy} isFavourite={isFavourite} />
+        <Agreement confidence={confidence} unit={unit} observedHighC={row.observedHighC} cityAccuracy={cityAccuracy} isFavourite={isFavourite} wuDayHighC={wuDayHighC} reportsTenths={reportsTenths} />
       )}
       {(icaoUrl || wuUrl || weatherComUrl) && (
         <div className="ext-links-mobile">
