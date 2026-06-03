@@ -54,8 +54,21 @@ describe('computeAgreement', () => {
     expect(weighted.medianC).toBe(31)
   })
 
-  it('returns null with fewer than 2 numeric sites', () => {
-    expect(computeAgreement([{ name: 'A', highC: 30 }])).toBeNull()
-    expect(computeAgreement([{ name: 'A', highC: 30 }, { name: 'B', highC: null }])).toBeNull()
+  it('returns null with no numeric sites', () => {
+    expect(computeAgreement([])).toBeNull()
+    expect(computeAgreement([{ name: 'A', highC: null }])).toBeNull()
+    // One valid + one null still reduces to single-model — handled below
+    const single = computeAgreement([{ name: 'A', highC: 30 }, { name: 'B', highC: null }])
+    expect(single).not.toBeNull()
+    expect(single.total).toBe(1)
+  })
+
+  it('handles single-model fallback (e.g. MET Norway only)', () => {
+    const result = computeAgreement([{ name: 'MET Norway', highC: 30 }], false)
+    expect(result).not.toBeNull()
+    expect(result.total).toBe(1)
+    expect(result.pct).toBe(100)
+    expect(result.consensusC).toBe(30)
+    expect(result.sites[0].agrees).toBe(true)
   })
 })

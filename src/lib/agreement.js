@@ -34,9 +34,27 @@ function weightedMedian(pairs) {
 // sites: [{ name, highC }]. Returns null when there aren't enough sites.
 export function computeAgreement(sites, reportsTenths = true, modelWeights = {}) {
   const valid = (sites || []).filter((s) => typeof s.highC === 'number')
-  if (valid.length < 2) return null
+  if (valid.length < 1) return null
 
   const stationF = (c) => Math.round(cToF(reportsTenths ? c : Math.round(c)))
+
+  // Single-source fallback (e.g. only MET Norway when Open-Meteo is down):
+  // consensus = that source, trivially 100% agreement.
+  if (valid.length === 1) {
+    const s = valid[0]
+    const weight = modelWeights[s.name] ?? 1.0
+    const roundedF = stationF(s.highC)
+    const bktLow = bucketLowOf(roundedF)
+    const site = { name: s.name, highC: s.highC, roundedC: Math.round(s.highC), roundedF, bucketLow: bktLow, weight, agrees: true }
+    return {
+      bucketLowF: bktLow,
+      bucketLabel: `${bktLow}–${bktLow + 1}`,
+      consensusC: Math.round(s.highC),
+      medianC: s.highC,
+      agree: 1, total: 1, pct: 100,
+      sites: [site],
+    }
+  }
   const scored = valid.map((s) => {
     const roundedF = stationF(s.highC)
     const weight = modelWeights[s.name] ?? 1.0
