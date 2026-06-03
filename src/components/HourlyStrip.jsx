@@ -170,7 +170,7 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
 
   const resolvedHourly = row.hourly.map((h) => ({
     ...h,
-    tempC: !h.observed && !h.isNow && ensHourly[h.time] != null ? ensHourly[h.time] : h.tempC,
+    tempC: !h.observed && ensHourly[h.time] != null ? ensHourly[h.time] : h.tempC,
   }))
 
   const temps = resolvedHourly.map((h) => h.tempC).filter((n) => typeof n === 'number')
