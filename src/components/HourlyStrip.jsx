@@ -206,11 +206,11 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
     if (target) target.scrollIntoView?.({ block: 'nearest', inline: 'center', behavior: 'instant' })
   }, [])
 
-  // WU full-day high: max across ALL WU values (observed so far + remaining forecast).
-  // Before peak: shows WU's expected day high (may be a future forecast hour).
-  // After peak: observed max = forecast hours are all lower, so this = final resolution.
+  // WU full-day high: max across all WU values for TODAY's hours only.
+  // wuByHour includes tomorrow's forecast (WU 2-day feed), so we must restrict
+  // to time keys that exist in row.hourly (which only contains today's hours).
   const wuAllVals = wuByHour
-    ? Object.values(wuByHour).filter((v) => typeof v === 'number' && Number.isFinite(v))
+    ? row.hourly.map((h) => wuByHour[h.time]).filter((v) => typeof v === 'number' && Number.isFinite(v))
     : []
   const wuDayMax = wuAllVals.length ? Math.max(...wuAllVals) : null
 
