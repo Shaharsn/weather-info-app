@@ -206,22 +206,16 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
     if (target) target.scrollIntoView?.({ block: 'nearest', inline: 'center', behavior: 'instant' })
   }, [])
 
-  // WU observed daily max = peak across hours that already have METAR observations.
-  // This is the running resolution value — what Polymarket will use at end of day.
-  const wuObsVals = row.hourly
-    .filter((h) => h.observed)
-    .map((h) => wuByHour?.[h.time])
-    .filter((v) => typeof v === 'number')
-  const wuObsMax = wuObsVals.length ? Math.max(...wuObsVals) : null
-  // For WU-only stations (no METAR): take the highest WU value across ALL hours.
-  const wuAnyMax = !row.hasObs && wuByHour
-    ? Math.max(...Object.values(wuByHour).filter((v) => typeof v === 'number'))
-    : null
-  const wuResolution = wuObsMax ?? (Number.isFinite(wuAnyMax) ? wuAnyMax : null)
-  // WU's remaining forecast for today (future, non-observed hours only).
-  // Uses only hours that haven't been observed yet so WU is compared to other
-  // models on equal footing — all pure forecasts. The WU observed max is already
-  // shown prominently in the header as the resolution value.
+  // WU full-day high: max across ALL WU values (observed so far + remaining forecast).
+  // Before peak: shows WU's expected day high (may be a future forecast hour).
+  // After peak: observed max = forecast hours are all lower, so this = final resolution.
+  const wuAllVals = wuByHour
+    ? Object.values(wuByHour).filter((v) => typeof v === 'number' && Number.isFinite(v))
+    : []
+  const wuDayMax = wuAllVals.length ? Math.max(...wuAllVals) : null
+
+  // For the model consensus chip: use only non-observed forecast hours so WU is
+  // compared to other models on equal footing (all pure forecasts, no observed data).
   const wuForecastVals = row.hourly
     .filter((h) => !h.observed && wuByHour?.[h.time] != null)
     .map((h) => wuByHour[h.time])
@@ -234,9 +228,9 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
         {row.now?.source === 'metar' && row.now.obsTime != null && (
           <span className="obs-time">Observed at {obsTimeLabel(row.now.obsTime)}</span>
         )}
-        {wuResolution != null && (
-          <span className="wu-resolution" title="WU running daily max — this is the value Polymarket resolves on">
-            WU max <strong>{formatTemp(wuResolution, unit)}</strong>
+        {wuDayMax != null && (
+          <span className="wu-resolution" title="WU expected day high (observed so far + remaining forecast) — converges to the Polymarket resolution value as the day progresses">
+            WU high <strong>{formatTemp(wuDayMax, unit)}</strong>
             {wuByHour && <span className="wu-live"> · live</span>}
           </span>
         )}
