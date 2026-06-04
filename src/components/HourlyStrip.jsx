@@ -93,7 +93,7 @@ function Agreement({ confidence, unit, observedHighC, cityAccuracy = {}, isFavou
 }
 
 // Selected hour: what each source said for that hour.
-function HourDetail({ card, models, reportsTenths, unit }) {
+function HourDetail({ card, models, reportsTenths, unit, wuByHour, cityAccuracy = {} }) {
   const time = card.time.slice(11, 16)
 
   if (card.observed) {
@@ -124,12 +124,23 @@ function HourDetail({ card, models, reportsTenths, unit }) {
     )
   }
 
+  // Build rows from model hourly values + WU (IBM) if available for this hour.
+  // WU is already calibrated to the station — include it with its 1.5 premium weight
+  // so it properly shifts the consensus (e.g. 3 models say 33, 3 say 32, WU says 32
+  // → 32 wins with 3×1.0 + 1.5 = 4.5 vs 3×1.0 = 3.0).
   const rows = (models || [])
     .map((m) => ({ name: m.name, tempC: m.hourly?.[card.time] }))
     .filter((r) => typeof r.tempC === 'number')
+  const wuTempC = wuByHour?.[card.time]
+  if (typeof wuTempC === 'number') rows.push({ name: WU_MODEL_NAME, tempC: wuTempC })
 
-  // How the sources resolve at this hour, in the market's unit.
-  const hourAgree = computeAgreement(rows.map((r) => ({ name: r.name, highC: r.tempC })), reportsTenths)
+  // Apply same weights as the daily Agreement: accuracy-log first, then explicit premiums.
+  const hourWeights = {
+    'Tomorrow.io': 1.5,
+    [WU_MODEL_NAME]: WU_WEIGHT,
+    ...Object.fromEntries(Object.entries(cityAccuracy).map(([n, s]) => [n, s.weight ?? 1.0])),
+  }
+  const hourAgree = computeAgreement(rows.map((r) => ({ name: r.name, highC: r.tempC })), reportsTenths, hourWeights)
 
   return (
     <div className="hour-detail">
@@ -137,8 +148,7 @@ function HourDetail({ card, models, reportsTenths, unit }) {
         {time} — by source
         {hourAgree && (
           <>
-            {' '}· median {formatTemp(hourAgree.medianC, unit)} →{' '}
-            <ConsensusTarget a={hourAgree} unit={unit} /> ·{' '}
+            {' '}·{' '}<ConsensusTarget a={hourAgree} unit={unit} />{' '}·{' '}
             <strong className={`pct ${confidenceClass(hourAgree.pct)}`}>
               {hourAgree.agree}/{hourAgree.total} ({hourAgree.pct}%)
             </strong>
@@ -260,7 +270,7 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
       </div>
 
       {selectedCard ? (
-        <HourDetail card={selectedCard} models={confidence?.models} reportsTenths={reportsTenths} unit={unit} />
+        <HourDetail card={selectedCard} models={confidence?.models} reportsTenths={reportsTenths} unit={unit} wuByHour={wuByHour} cityAccuracy={cityAccuracy} />
       ) : (
         <Agreement confidence={confidence} unit={unit} observedHighC={row.observedHighC} cityAccuracy={cityAccuracy} isFavourite={isFavourite} wuDayHighC={wuDayHighC} reportsTenths={reportsTenths} />
       )}
