@@ -225,10 +225,31 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
     ? ensembleHourlyConsensus(confidence.models, wuByHour, cityAccuracy, reportsTenths)
     : {}
 
-  const resolvedHourly = row.hourly.map((h) => ({
+  const withEns = row.hourly.map((h) => ({
     ...h,
     tempC: !h.observed && !h.isNow && ensHourly[h.time] != null ? ensHourly[h.time] : h.tempC,
   }))
+
+  // For °C markets: replace the hottest forecast card with the daily consensus
+  // so it matches the panel. Per-hour MODE can show 36 while the daily HIGH
+  // consensus is 35 (some models peak early at 14:00, others later with lower
+  // overall max). The daily consensus is the number that matters for betting.
+  const dailyConsensusC = !reportsTenths && confidence?.status === 'ready'
+    ? confidence.agreement?.consensusC ?? null
+    : null
+
+  const resolvedHourly = (() => {
+    if (dailyConsensusC == null) return withEns
+    // Find the hottest non-observed forecast hour
+    let hotTime = null, hotVal = -Infinity
+    for (const h of withEns) {
+      if (!h.observed && !h.isNow && h.tempC != null && h.tempC > hotVal) {
+        hotVal = h.tempC; hotTime = h.time
+      }
+    }
+    if (!hotTime || hotVal <= dailyConsensusC) return withEns
+    return withEns.map((h) => h.time === hotTime ? { ...h, tempC: dailyConsensusC } : h)
+  })()
 
   const temps = resolvedHourly.map((h) => h.tempC).filter((n) => typeof n === 'number')
   const max = temps.length ? Math.max(...temps) : null

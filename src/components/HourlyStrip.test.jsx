@@ -131,7 +131,7 @@ describe('HourlyStrip', () => {
       },
     }
     render(<HourlyStrip row={row} confidence={confidence} reportsTenths={false} unit="C" />)
-    expect(screen.getByText('15°C')).toBeInTheDocument() // consensus in °C, not a °F bucket
+    expect(screen.getAllByText('15°C').length).toBeGreaterThanOrEqual(1) // consensus in °C, not a °F bucket
     expect(screen.getByText(/ECMWF 15.30°C/)).toBeInTheDocument() // °C only
     expect(screen.getAllByText('→ 15°C').length).toBe(3) // ECMWF/UKMO/CMA round to 15, not 59°F
     expect(screen.queryByText(/°F/)).not.toBeInTheDocument()
