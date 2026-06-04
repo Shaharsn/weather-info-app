@@ -303,6 +303,7 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
           const hot = spread && h.tempC === max
           const cold = spread && h.tempC === min
           const kind = h.isNow ? 'now' : h.observed ? 'observed' : 'forecast'
+          const partial = h.observed && h.isCurrentHour && (h.obsCount ?? 1) === 1
           const isSel = h.time === selected
           const wu = wuByHour?.[h.time]
           return (
@@ -310,12 +311,17 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
               key={h.time}
               type="button"
               onClick={() => onSelect?.(h.time)}
-              className={`hour ${kind}${h.pending ? ' pending' : ''}${hot ? ' hot' : ''}${cold ? ' cold' : ''}${isSel ? ' selected' : ''}`}
+              className={`hour ${kind}${h.pending ? ' pending' : ''}${partial ? ' partial' : ''}${hot ? ' hot' : ''}${cold ? ' cold' : ''}${isSel ? ' selected' : ''}`}
             >
               <span className="hour-label">{h.time.slice(11, 16)}</span>
               <span className="hour-temp">{h.tempC == null ? 'TBD' : formatTemp(h.tempC, unit, unit === 'C' ? 0 : 2)}</span>
               {wu != null && <span className="hour-wu">WU {formatTemp(wu, unit, unit === 'C' ? 0 : 2)}</span>}
-              <span className="hour-tag">{h.pending ? 'now · on check' : kind}</span>
+              <span className="hour-tag">
+                {h.pending ? 'now · on check'
+                  : h.observed && h.isCurrentHour && h.obsCount === 1 ? '1 check · on check'
+                  : h.observed && h.isCurrentHour && h.obsCount > 1 ? `${h.obsCount} checks`
+                  : kind}
+              </span>
             </button>
           )
         })}

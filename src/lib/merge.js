@@ -83,7 +83,8 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
   // hour's PEAK reading (not just the latest): a station reporting every ~30 min
   // can hit its daily high mid-hour (e.g. 36° at :30, 35° at the next :00), and
   // keeping the latest would silently drop that peak from today's high.
-  const obsByHour = new Map()
+  const obsByHour = new Map()   // key -> { obsTime, tempC } — keeps peak reading
+  const obsCountByHour = new Map() // key -> count of reports in that hour
   for (const o of series) {
     if (localDateStr(o.obsTime, offset) !== today) continue
     const key = localHourStr(o.obsTime, offset)
@@ -91,19 +92,17 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
     if (!prev || o.tempC > prev.tempC || (o.tempC === prev.tempC && o.obsTime > prev.obsTime)) {
       obsByHour.set(key, o)
     }
+    obsCountByHour.set(key, (obsCountByHour.get(key) ?? 0) + 1)
   }
-  const observedHours = [...obsByHour.entries()].map(([time, o]) => ({
-    time, tempC: o.tempC, observed: true,
-  }))
   const observedKeys = new Set(obsByHour.keys())
   // "Today's high" is a daytime concept. Count observed peaks only from 6am local
   // so an overnight/pre-dawn warm spike (e.g. a passing front) can't masquerade
   // as the day's high — matching how weather sites report the daytime maximum.
   const DAY_START_HOUR = 6
   const observedMax = maxDefined(
-    ...observedHours
-      .filter((h) => Number(h.time.slice(11, 13)) >= DAY_START_HOUR)
-      .map((h) => h.tempC),
+    ...[...obsByHour.entries()]
+      .filter(([time]) => Number(time.slice(11, 13)) >= DAY_START_HOUR)
+      .map(([, o]) => o.tempC),
   )
 
   // Tomorrow's full hourly forecast (multi-model median, same source as today's).
@@ -127,6 +126,12 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
   // show the forecast for that hour (flagged `pending` so the UI tints it) rather
   // than a blank "TBD" — the value is "on check" until the observation lands.
   const nowHourKey = localHourStr(nowEpoch, offset)
+  // Build observedHours here so isCurrentHour can reference nowHourKey.
+  const observedHours = [...obsByHour.entries()].map(([time, o]) => ({
+    time, tempC: o.tempC, observed: true,
+    obsCount: obsCountByHour.get(time) ?? 1,   // how many METAR reports this hour
+    isCurrentHour: time === nowHourKey,          // still within this hour — more obs may arrive
+  }))
   const nowForecastC = fx?.hourly.find((h) => h.time === nowHourKey)?.tempC ?? null
   const nowPlaceholder = observedKeys.has(nowHourKey)
     ? []

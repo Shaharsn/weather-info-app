@@ -264,6 +264,9 @@ body {
 /* current hour with only a forecast so far — "on check" until the obs lands */
 .hour.pending { border-style: dashed; border-color: var(--warm-badge); background: rgba(255, 212, 121, 0.08); }
 .hour.pending .hour-temp { color: var(--warm-badge); }
+/* current hour has 1 METAR reading but a 2nd is still expected (~30 min stations) */
+.hour.partial { border-style: dashed; border-color: rgba(126, 224, 160, 0.5); background: rgba(126, 224, 160, 0.05); }
+.hour.partial .hour-tag { color: var(--warm-badge); }
 .hour .hour-wu { font-size: 11px; color: #c08af0; font-weight: 600; } /* violet — distinct from observed-green */
 .agreement .obs-exceeds { color: var(--observed); font-weight: 600; }
 .acc-badge {
