@@ -60,6 +60,13 @@ export async function fetchWuHourlyForecast(lat, lon) {
   return parseWuHourlyForecast(await fetchJson(url))
 }
 
+// Most-recent WU station observation — the historical endpoint has a 10-30 min
+// publication lag, so current conditions gives us the freshest reading.
+export async function fetchWuCurrentObs(locationId) {
+  const url = `${WU_BASE}/v1/location/${locationId}/observations/current.json?apiKey=${WU_KEY}&units=m`
+  return parseWuSeries((await fetchJson(url)).observations)
+}
+
 // Pure: merge WU observations + WU hourly forecast into { 'YYYY-MM-DDTHH:00' -> °C }.
 // Observations (past + current) keep each hour's PEAK — matching how the cards and
 // WU's own hourly display report the hour. The forecast fills ONLY hours at/after
@@ -84,13 +91,21 @@ export function mergeWuTimeline(obs, fcst, offset, nowSec) {
 // it — the by-lat/lon path can round the SAME station's temps ~1° differently
 // than the station-code path the WU website resolves on (Lau Fau Shan: code says
 // 29 at 13:00, geocode says 30). The forecast is always by coords.
+// Also fetches current conditions alongside historical — the historical endpoint
+// can lag 10-30 min, current conditions is near-real-time.
 export async function fetchWuTimeline(lat, lon, tz, nowMs = Date.now(), wuLocationId = null) {
   const obsPromise = wuLocationId
     ? fetchWuSeries(wuLocationId, tz, nowMs)
     : fetchWuObsByGeocode(lat, lon, tz, nowMs)
-  const [obs, fcst] = await Promise.all([
+  const currentPromise = wuLocationId
+    ? fetchWuCurrentObs(wuLocationId).catch(() => [])
+    : Promise.resolve([])
+  const [obs, current, fcst] = await Promise.all([
     obsPromise.catch(() => []),
+    currentPromise,
     fetchWuHourlyForecast(lat, lon).catch(() => []),
   ])
-  return mergeWuTimeline(obs, fcst, tzOffsetSeconds(tz, new Date(nowMs)), Math.floor(nowMs / 1000))
+  // Merge historical + current: deduplicated by obsTime, highest temp wins per hour
+  const allObs = [...obs, ...current]
+  return mergeWuTimeline(allObs, fcst, tzOffsetSeconds(tz, new Date(nowMs)), Math.floor(nowMs / 1000))
 }
