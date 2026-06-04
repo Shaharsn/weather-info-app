@@ -170,15 +170,26 @@ function HourDetail({ card, models, reportsTenths, unit, wuByHour, cityAccuracy 
   )
 }
 
-// When the ensemble is loaded, compute the per-hour median from the actual
-// model values — the same source the panel's bucket comes from.  This replaces
-// the stale batch-forecast value so card and panel are always consistent.
-function ensembleHourlyMedian(models) {
+// Per-hour consensus: for °C markets use the weighted MODE (same weights as the
+// Agreement panel) including WU. This makes card values consistent with the chips.
+// For °F markets, keep the continuous median (bucket logic is in computeAgreement).
+function ensembleHourlyConsensus(models, wuByHour, cityAccuracy, reportsTenths) {
   if (!models?.length) return {}
+  const weights = {
+    'Tomorrow.io': 1.5,
+    [WU_MODEL_NAME]: WU_WEIGHT,
+    ...Object.fromEntries(Object.entries(cityAccuracy || {}).map(([n, s]) => [n, s.weight ?? 1.0])),
+  }
   const byHour = {}
   for (const m of models) {
     for (const [time, tempC] of Object.entries(m.hourly || {})) {
-      ;(byHour[time] ??= []).push(tempC)
+      if (typeof tempC === 'number') (byHour[time] ??= []).push({ name: m.name, tempC })
+    }
+  }
+  // Include WU per-hour value (same data as the purple column)
+  if (wuByHour) {
+    for (const [time, tempC] of Object.entries(wuByHour)) {
+      if (typeof tempC === 'number') (byHour[time] ??= []).push({ name: WU_MODEL_NAME, tempC })
     }
   }
   const med = (arr) => {
@@ -186,13 +197,33 @@ function ensembleHourlyMedian(models) {
     const m = Math.floor(s.length / 2)
     return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
   }
-  return Object.fromEntries(Object.entries(byHour).map(([t, v]) => [t, med(v)]))
+  return Object.fromEntries(
+    Object.entries(byHour).map(([time, entries]) => {
+      if (!reportsTenths) {
+        // °C market: weighted MODE of whole-°C values — same logic as Agreement
+        const counts = {}
+        for (const e of entries) {
+          const r = Math.round(e.tempC)
+          counts[r] = (counts[r] || 0) + (weights[e.name] ?? 1.0)
+        }
+        let best = -1, modeVal = Math.round(med(entries.map(e => e.tempC)))
+        for (const [val, w] of Object.entries(counts)) {
+          if (w > best) { best = w; modeVal = Number(val) }
+        }
+        return [time, modeVal]
+      }
+      // °F market: continuous median (unchanged)
+      return [time, med(entries.map(e => e.tempC))]
+    }),
+  )
 }
 
 export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = {}, isFavourite = false, reportsTenths, unit = 'both', selected, onSelect, icaoUrl = null, icaoCode = null, wuUrl = null, weatherComUrl = null }) {
   // Use the ensemble-derived hourly median when available so the card value and
   // the panel's bucket/median always come from the same data source.
-  const ensHourly = confidence?.status === 'ready' ? ensembleHourlyMedian(confidence.models) : {}
+  const ensHourly = confidence?.status === 'ready'
+    ? ensembleHourlyConsensus(confidence.models, wuByHour, cityAccuracy, reportsTenths)
+    : {}
 
   const resolvedHourly = row.hourly.map((h) => ({
     ...h,
