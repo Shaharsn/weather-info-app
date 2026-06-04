@@ -126,11 +126,18 @@ export function buildStationData(station, metarSeries, fx, nowEpoch) {
   // show the forecast for that hour (flagged `pending` so the UI tints it) rather
   // than a blank "TBD" — the value is "on check" until the observation lands.
   const nowHourKey = localHourStr(nowEpoch, offset)
+  // Expected obs per hour = max obs count seen in any PAST hour today.
+  // Tells HourlyStrip how many checks to show (e.g. "CHECKED 1/2" for 30-min stations).
+  const pastObsCounts = [...obsCountByHour.entries()]
+    .filter(([time]) => time !== nowHourKey)
+    .map(([, c]) => c)
+  const expectedObsPerHour = pastObsCounts.length ? Math.max(...pastObsCounts) : 1
   // Build observedHours here so isCurrentHour can reference nowHourKey.
   const observedHours = [...obsByHour.entries()].map(([time, o]) => ({
     time, tempC: o.tempC, observed: true,
-    obsCount: obsCountByHour.get(time) ?? 1,   // how many METAR reports this hour
-    isCurrentHour: time === nowHourKey,          // still within this hour — more obs may arrive
+    obsCount: obsCountByHour.get(time) ?? 1,
+    isCurrentHour: time === nowHourKey,
+    expectedObsPerHour,
   }))
   const nowForecastC = fx?.hourly.find((h) => h.time === nowHourKey)?.tempC ?? null
   const nowPlaceholder = observedKeys.has(nowHourKey)

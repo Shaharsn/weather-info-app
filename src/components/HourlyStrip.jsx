@@ -200,15 +200,17 @@ function ensembleHourlyConsensus(models, wuByHour, cityAccuracy, reportsTenths) 
   return Object.fromEntries(
     Object.entries(byHour).map(([time, entries]) => {
       if (!reportsTenths) {
-        // °C market: weighted MODE of whole-°C values — same logic as Agreement
-        const counts = {}
+        // °C market: weighted MODE — use Map (insertion order) so ties go to the
+        // first-encountered value, matching computeAgreement. Plain {} would sort
+        // integer keys numerically, making lower temps always win ties (bug).
+        const counts = new Map()
         for (const e of entries) {
           const r = Math.round(e.tempC)
-          counts[r] = (counts[r] || 0) + (weights[e.name] ?? 1.0)
+          counts.set(r, (counts.get(r) ?? 0) + (weights[e.name] ?? 1.0))
         }
         let best = -1, modeVal = Math.round(med(entries.map(e => e.tempC)))
-        for (const [val, w] of Object.entries(counts)) {
-          if (w > best) { best = w; modeVal = Number(val) }
+        for (const [val, w] of counts) {
+          if (w > best) { best = w; modeVal = val }
         }
         return [time, modeVal]
       }
@@ -303,7 +305,7 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
           const hot = spread && h.tempC === max
           const cold = spread && h.tempC === min
           const kind = h.isNow ? 'now' : h.observed ? 'observed' : 'forecast'
-          const partial = h.observed && h.isCurrentHour && (h.obsCount ?? 1) === 1
+          const partial = h.observed && h.isCurrentHour && (h.obsCount ?? 1) < (h.expectedObsPerHour ?? 1)
           const isSel = h.time === selected
           const wu = wuByHour?.[h.time]
           return (
@@ -318,8 +320,8 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
               {wu != null && <span className="hour-wu">WU {formatTemp(wu, unit, unit === 'C' ? 0 : 2)}</span>}
               <span className="hour-tag">
                 {h.pending ? 'now · on check'
-                  : h.observed && h.isCurrentHour && h.obsCount === 1 ? '1 check · on check'
-                  : h.observed && h.isCurrentHour && h.obsCount > 1 ? `${h.obsCount} checks`
+                  : h.observed && h.isCurrentHour && h.obsCount < (h.expectedObsPerHour ?? 1)
+                    ? `checked ${h.obsCount}/${h.expectedObsPerHour}`
                   : kind}
               </span>
             </button>
