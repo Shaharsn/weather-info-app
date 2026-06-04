@@ -28,7 +28,7 @@ function ConsensusTarget({ a, unit }) {
 
 // Default view (no hour selected): the multi-model consensus for today's high.
 const WU_MODEL_NAME = 'WU (IBM)'
-const WU_WEIGHT = 1.5 // IBM Weather Company calibrated model — treated like Tomorrow.io
+const WU_WEIGHT = 1.0 // starts neutral; accuracy log adjusts after MIN_SAMPLES days
 
 function Agreement({ confidence, unit, observedHighC, cityAccuracy = {}, isFavourite = false, wuDayHighC = null, reportsTenths = true }) {
   if (!confidence || confidence.status === 'idle') return null
@@ -48,7 +48,7 @@ function Agreement({ confidence, unit, observedHighC, cityAccuracy = {}, isFavou
     : baseModels
   const modelWeights = {
     'Tomorrow.io': 1.0,           // default premium weight, overridden by accuracy data once 3+ samples exist
-    [WU_MODEL_NAME]: WU_WEIGHT,   // always 1.5 — WU never enters the accuracy log so spread won't override
+    [WU_MODEL_NAME]: WU_WEIGHT,  // starts neutral
     ...Object.fromEntries(Object.entries(cityAccuracy).map(([n, s]) => [n, s.weight ?? 1.0])),
   }
   // Recompute agreement including WU so it properly affects consensus % and bucket.

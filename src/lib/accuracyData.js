@@ -1,7 +1,7 @@
 // Load accuracy log from the dev server and compute per-station, per-model
 // accuracy scores. Used to weight the consensus and annotate model chips.
 
-const MIN_SAMPLES = 3 // need at least this many obs before trusting a score
+const MIN_SAMPLES = 5 // require 5 logged days per city before adjusting weights
 
 // Fetch all logged accuracy records from the server.
 export async function fetchAccuracyEntries() {
