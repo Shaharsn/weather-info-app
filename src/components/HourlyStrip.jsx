@@ -170,61 +170,49 @@ function HourDetail({ card, models, reportsTenths, unit, wuByHour, cityAccuracy 
   )
 }
 
-// Per-hour consensus: for °C markets use the weighted MODE (same weights as the
-// Agreement panel) including WU. This makes card values consistent with the chips.
-// For °F markets, keep the continuous median (bucket logic is in computeAgreement).
-function ensembleHourlyConsensus(models, wuByHour, cityAccuracy, reportsTenths) {
+// Per-hour card values: use computeAgreement for each hour so cards always match
+// what the HourDetail panel shows — same function, same inputs, guaranteed consistent.
+// For °C markets: consensusC (whole-°C MODE). For °F markets: continuous median.
+function computeHourlyCardValues(models, wuByHour, cityAccuracy, reportsTenths) {
   if (!models?.length) return {}
-  const weights = {
+  const hourWeights = {
     'Tomorrow.io': 1.0,
     [WU_MODEL_NAME]: WU_WEIGHT,
     ...Object.fromEntries(Object.entries(cityAccuracy || {}).map(([n, s]) => [n, s.weight ?? 1.0])),
   }
-  const byHour = {}
-  for (const m of models) {
-    for (const [time, tempC] of Object.entries(m.hourly || {})) {
-      if (typeof tempC === 'number') (byHour[time] ??= []).push({ name: m.name, tempC })
+  // Collect all time keys from all models + WU
+  const allTimes = new Set()
+  for (const m of models) for (const t of Object.keys(m.hourly || {})) allTimes.add(t)
+  if (wuByHour) for (const t of Object.keys(wuByHour)) allTimes.add(t)
+
+  const result = {}
+  for (const time of allTimes) {
+    const sites = models
+      .map((m) => ({ name: m.name, highC: m.hourly?.[time] }))
+      .filter((s) => typeof s.highC === 'number')
+    const wuC = wuByHour?.[time]
+    if (typeof wuC === 'number') sites.push({ name: WU_MODEL_NAME, highC: wuC })
+    if (!sites.length) continue
+
+    if (!reportsTenths) {
+      // °C market: reuse computeAgreement — identical to HourDetail, always consistent
+      const a = computeAgreement(sites, false, hourWeights)
+      result[time] = a ? a.consensusC : Math.round(sites.reduce((s, m) => s + m.highC, 0) / sites.length)
+    } else {
+      // °F market: continuous median (computeAgreement's bucket doesn't map back to °C cleanly)
+      const vals = sites.map((s) => s.highC).sort((a, b) => a - b)
+      const m = Math.floor(vals.length / 2)
+      result[time] = vals.length % 2 ? vals[m] : (vals[m - 1] + vals[m]) / 2
     }
   }
-  // Include WU per-hour value (same data as the purple column)
-  if (wuByHour) {
-    for (const [time, tempC] of Object.entries(wuByHour)) {
-      if (typeof tempC === 'number') (byHour[time] ??= []).push({ name: WU_MODEL_NAME, tempC })
-    }
-  }
-  const med = (arr) => {
-    const s = [...arr].sort((a, b) => a - b)
-    const m = Math.floor(s.length / 2)
-    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
-  }
-  return Object.fromEntries(
-    Object.entries(byHour).map(([time, entries]) => {
-      if (!reportsTenths) {
-        // °C market: weighted MODE — use Map (insertion order) so ties go to the
-        // first-encountered value, matching computeAgreement. Plain {} would sort
-        // integer keys numerically, making lower temps always win ties (bug).
-        const counts = new Map()
-        for (const e of entries) {
-          const r = Math.round(e.tempC)
-          counts.set(r, (counts.get(r) ?? 0) + (weights[e.name] ?? 1.0))
-        }
-        let best = -1, modeVal = Math.round(med(entries.map(e => e.tempC)))
-        for (const [val, w] of counts) {
-          if (w > best) { best = w; modeVal = val }
-        }
-        return [time, modeVal]
-      }
-      // °F market: continuous median (unchanged)
-      return [time, med(entries.map(e => e.tempC))]
-    }),
-  )
+  return result
 }
 
 export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = {}, isFavourite = false, reportsTenths, unit = 'both', selected, onSelect, icaoUrl = null, icaoCode = null, wuUrl = null, weatherComUrl = null }) {
   // Use the ensemble-derived hourly median when available so the card value and
   // the panel's bucket/median always come from the same data source.
   const ensHourly = confidence?.status === 'ready'
-    ? ensembleHourlyConsensus(confidence.models, wuByHour, cityAccuracy, reportsTenths)
+    ? computeHourlyCardValues(confidence.models, wuByHour, cityAccuracy, reportsTenths)
     : {}
 
   const withEns = row.hourly.map((h) => ({
