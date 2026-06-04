@@ -47,7 +47,7 @@ function Agreement({ confidence, unit, observedHighC, cityAccuracy = {}, isFavou
     ? [...baseModels.filter((m) => m.name !== WU_MODEL_NAME), { name: WU_MODEL_NAME, highC: wuDayHighC }]
     : baseModels
   const modelWeights = {
-    'Tomorrow.io': 1.5,           // default premium weight, overridden by accuracy data once 3+ samples exist
+    'Tomorrow.io': 1.0,           // default premium weight, overridden by accuracy data once 3+ samples exist
     [WU_MODEL_NAME]: WU_WEIGHT,   // always 1.5 — WU never enters the accuracy log so spread won't override
     ...Object.fromEntries(Object.entries(cityAccuracy).map(([n, s]) => [n, s.weight ?? 1.0])),
   }
@@ -136,7 +136,7 @@ function HourDetail({ card, models, reportsTenths, unit, wuByHour, cityAccuracy 
 
   // Apply same weights as the daily Agreement: accuracy-log first, then explicit premiums.
   const hourWeights = {
-    'Tomorrow.io': 1.5,
+    'Tomorrow.io': 1.0,
     [WU_MODEL_NAME]: WU_WEIGHT,
     ...Object.fromEntries(Object.entries(cityAccuracy).map(([n, s]) => [n, s.weight ?? 1.0])),
   }
@@ -176,7 +176,7 @@ function HourDetail({ card, models, reportsTenths, unit, wuByHour, cityAccuracy 
 function ensembleHourlyConsensus(models, wuByHour, cityAccuracy, reportsTenths) {
   if (!models?.length) return {}
   const weights = {
-    'Tomorrow.io': 1.5,
+    'Tomorrow.io': 1.0,
     [WU_MODEL_NAME]: WU_WEIGHT,
     ...Object.fromEntries(Object.entries(cityAccuracy || {}).map(([n, s]) => [n, s.weight ?? 1.0])),
   }

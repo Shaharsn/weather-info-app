@@ -8,7 +8,7 @@ import {
 } from '../lib/ensembleCache.js'
 import { readTomorrowCache } from '../lib/tomorrowCache.js'
 
-const TOMORROW_WEIGHT = 1.5
+const TOMORROW_WEIGHT = 1.0 // neutral until accuracy data justifies more
 const RETRY_DELAY_MS = 5 * 60 * 1000 // retry after 5 min — per-station fallback is rare after A1 fix
 
 export function useConfidence(target, enabled, deps = {}) {
