@@ -52,8 +52,8 @@ describe('HourlyStrip', () => {
     render(
       <HourlyStrip row={row} unit="C" wuByHour={{ '2026-05-29T06:00': 11, '2026-05-29T18:00': 17 }} />,
     )
-    expect(screen.getByText('WU 11.00°C')).toBeInTheDocument()
-    expect(screen.getByText('WU 17.00°C')).toBeInTheDocument()
+    expect(screen.getByText('WU 11°C')).toBeInTheDocument()
+    expect(screen.getByText('WU 17°C')).toBeInTheDocument()
   })
   it('marks the current-hour forecast card as pending ("on check"), not TBD', () => {
     const r = {
@@ -62,7 +62,7 @@ describe('HourlyStrip', () => {
     }
     const { container } = render(<HourlyStrip row={r} unit="C" />)
     expect(container.querySelector('.hour.pending')).toBeInTheDocument()
-    expect(screen.getByText('15.00°C')).toBeInTheDocument() // forecast value, not TBD
+    expect(screen.getByText('15°C')).toBeInTheDocument() // forecast value, not TBD
     expect(screen.getByText(/on check/)).toBeInTheDocument()
   })
   it('calls onSelect with the clicked hour', () => {

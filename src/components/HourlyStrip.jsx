@@ -261,8 +261,8 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
               className={`hour ${kind}${h.pending ? ' pending' : ''}${hot ? ' hot' : ''}${cold ? ' cold' : ''}${isSel ? ' selected' : ''}`}
             >
               <span className="hour-label">{h.time.slice(11, 16)}</span>
-              <span className="hour-temp">{h.tempC == null ? 'TBD' : formatTemp(h.tempC, unit)}</span>
-              {wu != null && <span className="hour-wu">WU {formatTemp(wu, unit)}</span>}
+              <span className="hour-temp">{h.tempC == null ? 'TBD' : formatTemp(h.tempC, unit, unit === 'C' ? 0 : 2)}</span>
+              {wu != null && <span className="hour-wu">WU {formatTemp(wu, unit, unit === 'C' ? 0 : 2)}</span>}
               <span className="hour-tag">{h.pending ? 'now · on check' : kind}</span>
             </button>
           )
