@@ -47,8 +47,9 @@ function Agreement({ confidence, unit, observedHighC, cityAccuracy = {}, isFavou
     ? [...baseModels.filter((m) => m.name !== WU_MODEL_NAME), { name: WU_MODEL_NAME, highC: wuDayHighC }]
     : baseModels
   const modelWeights = {
-    [WU_MODEL_NAME]: WU_WEIGHT,
     ...Object.fromEntries(Object.entries(cityAccuracy).map(([n, s]) => [n, s.weight ?? 1.0])),
+    [WU_MODEL_NAME]: WU_WEIGHT,  // 1.5 — always wins over accuracy-log weight
+    'Tomorrow.io': 1.5,           // 1.5 — always wins over accuracy-log weight
   }
   // Recompute agreement including WU so it properly affects consensus % and bucket.
   const a = computeAgreement(allModels, reportsTenths, modelWeights) ?? confidence.agreement
