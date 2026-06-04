@@ -249,7 +249,9 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
         hotVal = h.tempC; hotTime = h.time
       }
     }
-    if (!hotTime || hotVal <= dailyConsensusC) return withEns
+    if (!hotTime) return withEns
+    // Always align the peak card to the daily consensus — the per-hour value can
+    // be above OR below the daily consensus depending on when models peak.
     return withEns.map((h) => h.time === hotTime ? { ...h, tempC: dailyConsensusC } : h)
   })()
 
