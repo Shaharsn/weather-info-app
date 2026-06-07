@@ -13,6 +13,7 @@ import {
   readForecastCache as defaultReadCache,
   writeForecastCache as defaultWriteCache,
 } from '../lib/forecastCache.js'
+import { writeEnsembleCache as defaultWriteEnsemble } from '../lib/ensembleCache.js'
 
 // Cities the user has asked to be notified about, persisted across reloads.
 const NOTIFY_KEY = 'weather-notify-cities'
@@ -43,6 +44,7 @@ export function useWeather(stations, deps = {}) {
   const nowMs = deps.nowMs ?? defaultNowMs
   const readCache = deps.readForecastCache ?? defaultReadCache
   const writeCache = deps.writeForecastCache ?? defaultWriteCache
+  const writeEnsemble = deps.writeEnsembleCache ?? defaultWriteEnsemble
   const notify = deps.notify ?? defaultNotify
   const requestPermission = deps.requestNotifyPermission ?? defaultRequestPermission
   const sendSlack = deps.sendSlack ?? defaultSendSlack
@@ -116,8 +118,35 @@ export function useWeather(stations, deps = {}) {
 
         const live = await fxPromise
         if (live) {
-          writeCache(live, nowMs())
-          fx.current = { arr: live, at: nowMs(), staleSince: null }
+          // How many models did the new fetch return vs the cached forecast?
+          // If Open-Meteo fell back to MET Norway (1 model) but the cache has
+          // the full 8-model run, keep the richer cached forecast rather than
+          // overwriting it with degraded data. Threshold = 4 models (batch A minimum).
+          const liveModelCount = Math.max(...live.map((f) => f.models?.length ?? 0))
+          const cached = readCache(nowMs())
+          const cachedModelCount = cached
+            ? Math.max(...cached.fxArr.map((f) => f.models?.length ?? 0))
+            : 0
+
+          if (liveModelCount >= 4 || liveModelCount >= cachedModelCount) {
+            // New data is good (≥4 models) OR at least as good as cache → use it
+            writeCache(live, nowMs())
+            fx.current = { arr: live, at: nowMs(), staleSince: null }
+            // Eagerly write each station's models to ensembleCache so expanded rows
+            // can show the full model list even during later Open-Meteo outages.
+            live.forEach((f, i) => {
+              if ((f?.models?.length ?? 0) > 1) {
+                writeEnsemble(stations[i].lat, stations[i].lon, f.models, nowMs())
+              }
+            })
+          } else if (cached) {
+            // New data is degraded (MET Norway fallback) but cache has better models — keep cache
+            fx.current = { arr: cached.fxArr, at: cached.savedAt, staleSince: new Date(cached.savedAt) }
+          } else {
+            // No cache at all — use the degraded data
+            writeCache(live, nowMs())
+            fx.current = { arr: live, at: nowMs(), staleSince: null }
+          }
         } else {
           const cached = readCache(nowMs())
           fx.current = cached

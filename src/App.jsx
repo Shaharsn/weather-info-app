@@ -15,7 +15,7 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false)
   const { modelScores, consensusScores } = useAccuracyData()
   const { favourites, toggleFavourite } = useFavourites()
-  const { prioritize: prioritizeTomorrow } = useTomorrowio(STATIONS, favourites)
+  const { prioritize: prioritizeTomorrow } = useTomorrowio(STATIONS)
   const rowsRef = useRef(rows)
   rowsRef.current = rows
 
@@ -65,6 +65,14 @@ export default function App() {
     writeTomorrowKey(tomorrowKey)
     setTomorrowStatus(tomorrowKey.trim() ? 'Saved.' : 'Cleared.')
   }
+
+  // WeatherAPI.com
+  const WAPI_KEY = 'weather-weatherapi-key'
+  const readWapiKey = () => { try { return localStorage.getItem(WAPI_KEY) || '' } catch { return '' } }
+  const writeWapiKey = (k) => { try { localStorage.setItem(WAPI_KEY, (k || '').trim()) } catch {} }
+  const [wapiKey, setWapiKey] = useState(readWapiKey)
+  const [wapiStatus, setWapiStatus] = useState('')
+  const saveWapi = () => { writeWapiKey(wapiKey); setWapiStatus(wapiKey.trim() ? 'Saved.' : 'Cleared.') }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -129,6 +137,22 @@ export default function App() {
                 </div>
                 <div className="settings-divider" />
                 <div className="settings-section">
+                  <div className="settings-label">WeatherAPI.com <span className="settings-hint">(free key at weatherapi.com)</span></div>
+                  <div className="settings-row">
+                    <input
+                      className="settings-input"
+                      type="password"
+                      placeholder="API key"
+                      value={wapiKey}
+                      onChange={(e) => setWapiKey(e.target.value)}
+                      aria-label="WeatherAPI.com API key"
+                    />
+                    <button className="settings-save" onClick={saveWapi}>Save</button>
+                  </div>
+                  {wapiStatus && <span className="settings-status">{wapiStatus}</span>}
+                </div>
+                <div className="settings-divider" />
+                <div className="settings-section">
                   <div className="settings-label">Slack alerts</div>
                   <div className="settings-row">
                     <input
@@ -188,6 +212,7 @@ export default function App() {
             cityAccuracy={modelScores[row.city] ?? {}}
             consensusAccuracy={consensusScores[row.city] ?? null}
             onPrioritizeTomorrow={() => prioritizeTomorrow(row.city)}
+            confidenceDeps={{ weatherApiKey: wapiKey || null }}
           />
         ))}
         {rows.length > 0 && filtered.length === 0 && (

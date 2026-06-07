@@ -248,6 +248,12 @@ body {
 }
 .wu-resolution strong { font-weight: 700; }
 .wu-live { color: var(--muted); font-size: 11px; }
+.app-consensus {
+  font-size: 12px; color: var(--observed);
+  background: rgba(126, 224, 160, 0.1); border: 1px solid rgba(126, 224, 160, 0.25);
+  padding: 2px 8px; border-radius: 6px;
+}
+.app-consensus strong { font-weight: 700; }
 .hours { display: flex; flex-wrap: wrap; gap: 7px; }
 
 .hour {
@@ -317,6 +323,40 @@ body {
 .vote.agree { border-color: rgba(126, 224, 160, 0.5); color: var(--observed); }
 .vote.disagree { color: var(--muted); opacity: 0.7; }
 .vote.tomorrow-pending { color: var(--muted); opacity: 0.5; font-style: italic; }
+.vote.wu-separate { color: #c08af0; border-color: rgba(192, 138, 240, 0.4); font-style: italic; }
+.wu-tiebreaker { color: #c08af0; font-size: 11px; font-weight: 600; }
+.limited-models { color: var(--hot); font-size: 12px; font-weight: 600; }
+
+/* Strong dynamic consensus — peak card when Tomorrow.io + WeatherAPI + WU all agree */
+.hour.hot.strong-dynamic {
+  background: linear-gradient(135deg, #ff2d2d 0%, #ff7a00 100%);
+  border-color: #ff2d2d;
+  box-shadow: 0 0 8px rgba(255, 45, 45, 0.5);
+}
+.hour.hot.strong-dynamic .hour-temp { color: #fff; font-weight: 800; }
+.hour.hot.strong-dynamic .hour-label,
+.hour.hot.strong-dynamic .hour-tag { color: rgba(255,255,255,0.85); }
+
+/* App consensus badge — stronger highlight when dynamic sources agree */
+.app-consensus.strong { background: rgba(255, 45, 45, 0.18); border-color: rgba(255, 45, 45, 0.5); color: #ff5555; }
+.strong-signal { color: #ff5555; font-weight: 700; }
+
+/* NWP background section — collapsed by default, dimmed */
+.nwp-background { margin-top: 8px; }
+.nwp-summary {
+  font-size: 11px; color: var(--muted); cursor: pointer; list-style: none;
+  padding: 3px 0; user-select: none;
+}
+.nwp-summary::-webkit-details-marker { display: none; }
+.nwp-summary::before { content: '▸ '; }
+details[open] .nwp-summary::before { content: '▾ '; }
+.nwp-sites { opacity: 0.55; margin-top: 5px; }
+.vote.nwp-vote { color: var(--muted); border-color: rgba(255,255,255,0.1); }
+.bias-warning {
+  font-size: 11px; color: var(--hot); margin-bottom: 6px;
+  padding: 4px 8px; background: rgba(255, 122, 112, 0.1);
+  border-radius: 5px; border-left: 3px solid var(--hot);
+}
 
 .tomorrow { margin-top: 12px; font-size: 13px; color: var(--muted); }
 .tomorrow strong { color: var(--text); }
@@ -368,6 +408,13 @@ button.ext-btn { appearance: none; }
 .acc-row-badge.good { background: rgba(126, 224, 160, 0.15); color: var(--observed); }
 .acc-row-badge.ok   { background: rgba(255, 212, 121, 0.15); color: var(--warm-badge); }
 .acc-row-badge.bad  { background: rgba(255, 122, 112, 0.15); color: var(--hot); }
+
+/* Polymarket >80% indicator — shown when a city's market is already effectively decided */
+.poly-dominated {
+  font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 5px;
+  background: rgba(255, 122, 112, 0.15); color: var(--muted);
+  white-space: nowrap; cursor: help; flex-shrink: 0; opacity: 0.8;
+}
 
 /* Mobile-only icon strip: clock + star shown inline; hidden on desktop */
 .mobile-icons { display: none; }

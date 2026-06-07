@@ -100,6 +100,13 @@ describe('HourlyStrip', () => {
   it('renders the °F bucket agreement for a °F (US) market', () => {
     const confidence = {
       status: 'ready',
+      // models drives finalAgreement; agreement is kept for historic compat but not used
+      models: [
+        { name: 'ECMWF', highC: 29.1, hourly: {} },
+        { name: 'ICON', highC: 28.4, hourly: {} },
+        { name: 'NWS (US)', highC: 29.2, hourly: {} },
+        { name: 'GFS', highC: 29.0, hourly: {} },
+      ],
       agreement: {
         bucketLabel: '84–85', consensusC: 29, medianC: 29.05, agree: 3, total: 4, pct: 75,
         sites: [
@@ -111,15 +118,24 @@ describe('HourlyStrip', () => {
       },
     }
     render(<HourlyStrip row={row} confidence={confidence} reportsTenths unit="F" />)
-    expect(screen.getByText('84–85°F')).toBeInTheDocument() // the bid bucket
-    expect(screen.getByText('3/4 (75%)')).toBeInTheDocument()
-    expect(screen.getByText(/ICON 83.12°F/)).toBeInTheDocument() // °F market: °F only
-    expect(screen.getByText('→ 83°F')).toBeInTheDocument() // rounds to 83°F
+    // NWS (US) is the only dynamic source → 1/1 (100%); ECMWF/ICON/GFS in NWP background
+    expect(screen.getByText('84–85°F')).toBeInTheDocument() // bucket driven by NWS (29.2→84)
+    expect(screen.getByText('1/1 (100%)')).toBeInTheDocument()
+    // NWS shows in the dynamic panel
+    expect(screen.getByText(/NWS \(US\)/)).toBeInTheDocument()
+    // NWP background section present (may be collapsed)
+    expect(screen.getByText(/NWP background/)).toBeInTheDocument()
   })
 
   it('renders the whole-°C consensus for a °C market', () => {
     const confidence = {
       status: 'ready',
+      models: [
+        { name: 'ECMWF', highC: 15.3, hourly: {} },
+        { name: 'GFS', highC: 14.3, hourly: {} },
+        { name: 'UKMO', highC: 15.0, hourly: {} },
+        { name: 'CMA', highC: 15.2, hourly: {} },
+      ],
       agreement: {
         bucketLabel: null, consensusC: 15, medianC: 14.65, agree: 3, total: 4, pct: 75,
         sites: [
@@ -137,9 +153,14 @@ describe('HourlyStrip', () => {
     expect(screen.queryByText(/°F/)).not.toBeInTheDocument()
   })
 
-  it('notes when observations already exceed the model median high', () => {
+  it('notes when observations already exceed the model consensus high', () => {
     const confidence = {
       status: 'ready',
+      models: [
+        { name: 'A', highC: 21, hourly: {} },
+        { name: 'B', highC: 21, hourly: {} },
+        { name: 'C', highC: 21, hourly: {} },
+      ],
       agreement: { bucketLabel: null, consensusC: 21, medianC: 21, agree: 3, total: 8, pct: 38, sites: [] },
     }
     render(<HourlyStrip row={{ ...row, observedHighC: 22 }} confidence={confidence} unit="C" />)
@@ -148,7 +169,7 @@ describe('HourlyStrip', () => {
 
   it('shows an unavailable note when confidence could not be computed', () => {
     render(<HourlyStrip row={row} confidence={{ status: 'unavailable', agreement: null }} />)
-    expect(screen.getByText(/agreement unavailable/i)).toBeInTheDocument()
+    expect(screen.getByText(/models unavailable/i)).toBeInTheDocument()
   })
 
   it('renders nothing extra when confidence is absent', () => {

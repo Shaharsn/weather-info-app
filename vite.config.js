@@ -32,6 +32,20 @@ const proxy = {
     changeOrigin: true,
     rewrite: (p) => p.replace(/^\/slack/, ''),
   },
+  // WeatherAPI.com proxy (obs-assimilated, updates every ~3h, free 1M calls/month)
+  '/api/weatherapi-proxy': {
+    target: 'https://api.weatherapi.com',
+    changeOrigin: true,
+    rewrite: (p) => p.replace(/^\/api\/weatherapi-proxy/, '/v1/forecast.json'),
+  },
+  // Open-Meteo proxy — in dev, forwards straight to Open-Meteo.
+  // In production, the /api/open-meteo-proxy.js Vercel function adds
+  // Cache-Control: s-maxage=14400 so the CDN caches responses for 4 h.
+  '/api/open-meteo-proxy': {
+    target: 'https://api.open-meteo.com',
+    changeOrigin: true,
+    rewrite: (p) => p.replace(/^\/api\/open-meteo-proxy/, '/v1/forecast'),
+  },
 }
 
 export default defineConfig({

@@ -2,7 +2,7 @@
 // still show a recent forecast instead of blanking. Forecasts change little
 // hour-to-hour, so a few-hours-old copy is far better than nothing.
 const KEY = 'wx-forecast-cache-v1'
-export const FORECAST_MAX_AGE_MS = 45 * 60 * 1000 // 45 min — keeps fallback data fresh enough without blocking quota-reset recovery
+export const FORECAST_MAX_AGE_MS = 4 * 60 * 60 * 1000 // 4 h — NWP models update every 6–12h, so 4h-old data is still the current model run
 
 function store() {
   try {

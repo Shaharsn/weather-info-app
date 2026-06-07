@@ -1,18 +1,35 @@
-// Load accuracy log from the dev server and compute per-station, per-model
-// accuracy scores. Used to weight the consensus and annotate model chips.
+// Load accuracy log — from localStorage (works prod+dev) merged with the
+// dev-server file. Used to annotate model chips (accuracy badges only;
+// weights are no longer used for consensus weighting).
 
-const MIN_SAMPLES = 5 // require 5 logged days per city before adjusting weights
+const MIN_SAMPLES = 5 // min samples before badges are shown
+const LS_LOG_KEY = 'weather-accuracy-log-v1'
 
-// Fetch all logged accuracy records from the server.
+// Fetch all logged accuracy records from localStorage + dev server (merged).
 export async function fetchAccuracyEntries() {
+  // Primary: localStorage — always available, persists in production
+  let entries = []
+  try {
+    const raw = localStorage.getItem(LS_LOG_KEY)
+    if (raw) entries = JSON.parse(raw)
+  } catch {}
+
+  // Supplement with dev-server file (adds entries logged before localStorage was adopted)
   try {
     const r = await fetch('/api/accuracy-log')
-    if (!r.ok) return []
-    const j = await r.json()
-    return j.entries ?? []
-  } catch {
-    return [] // dev server may be in the middle of a restart
-  }
+    if (r.ok) {
+      const j = await r.json()
+      const serverEntries = j.entries ?? []
+      if (serverEntries.length > 0) {
+        const seen = new Set(entries.map((e) => `${e.city}:${e.date}`))
+        for (const e of serverEntries) {
+          if (!seen.has(`${e.city}:${e.date}`)) entries.push(e)
+        }
+      }
+    }
+  } catch {}
+
+  return entries
 }
 
 // Pure: log entries -> { [city]: { [modelName]: { exactPct, closePct, total, weight } } }

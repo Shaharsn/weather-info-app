@@ -2,7 +2,7 @@
 // the page doesn't re-hit Open-Meteo. Keeps the optional confidence feature well
 // within the free quota in normal use.
 const KEY = 'wx-ensemble-cache-v1'
-export const ENSEMBLE_MAX_AGE_MS = 2 * 60 * 60 * 1000 // 2 hours
+export const ENSEMBLE_MAX_AGE_MS = 6 * 60 * 60 * 1000 // 6 h — matches NWP model update cadence; survives typical outages
 const MAX_ENTRIES = 80
 
 function store() {

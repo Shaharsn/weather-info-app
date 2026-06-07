@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchStationEnsemble as defaultFetch } from '../api/ensemble.js'
 import { fetchNwsForecast as defaultFetchNws } from '../api/nws.js'
+import { fetchWeatherAPI as defaultFetchWeatherAPI } from '../api/weatherapi.js'
 import { computeAgreement } from '../lib/agreement.js'
 import {
   readEnsembleCache as defaultRead,
   writeEnsembleCache as defaultWrite,
 } from '../lib/ensembleCache.js'
 import { readTomorrowCache } from '../lib/tomorrowCache.js'
+import { readWeatherApiCache, writeWeatherApiCache } from '../lib/weatherApiCache.js'
 
-const TOMORROW_WEIGHT = 1.0 // neutral until accuracy data justifies more
-const RETRY_DELAY_MS = 5 * 60 * 1000 // retry after 5 min — per-station fallback is rare after A1 fix
+const RETRY_DELAY_MS = 5 * 60 * 1000 // retry after 5 min — per-station fallback is rare after batch-split fix
 
 export function useConfidence(target, enabled, deps = {}) {
   const fetchEnsemble = deps.fetchStationEnsemble ?? defaultFetch
   const fetchNws = deps.fetchNwsForecast ?? defaultFetchNws
+  const fetchWAPI = deps.fetchWeatherAPI ?? defaultFetchWeatherAPI
   const readCache = deps.readEnsembleCache ?? defaultRead
   const writeCache = deps.writeEnsembleCache ?? defaultWrite
   const nowMs = deps.nowMs ?? (() => Date.now())
@@ -25,17 +27,13 @@ export function useConfidence(target, enabled, deps = {}) {
   const retryTimer = useRef(null)
 
   const buildState = useCallback((baseModels) => {
-    const tCache = readTomorrowCache(target.lat, target.lon, nowMs())
-    const allModels = tCache?.highC != null
-      ? [...baseModels, { name: 'Tomorrow.io', highC: tCache.highC, hourly: tCache.hourly ?? {} }]
-      : baseModels
-    const modelWeights = {
-      'Tomorrow.io': TOMORROW_WEIGHT,
-      ...Object.fromEntries(
-        Object.entries(target.modelWeights ?? {}).map(([name, s]) => [name, s.weight ?? 1.0]),
-      ),
-    }
-    const agreement = computeAgreement(allModels, target.reportsTenths, modelWeights)
+    const now = nowMs()
+    const tCache = readTomorrowCache(target.lat, target.lon, now)
+    const wapiCache = readWeatherApiCache(target.lat, target.lon, now)
+    let allModels = [...baseModels]
+    if (tCache?.highC != null) allModels.push({ name: 'Tomorrow.io', highC: tCache.highC, hourly: tCache.hourly ?? {} })
+    if (wapiCache?.highC != null) allModels.push({ name: 'WeatherAPI', highC: wapiCache.highC, hourly: wapiCache.hourly ?? {} })
+    const agreement = computeAgreement(allModels, target.reportsTenths, {})
     return { status: agreement ? 'ready' : 'unavailable', agreement, models: allModels }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target.lat, target.lon, target.reportsTenths])
@@ -61,9 +59,11 @@ export function useConfidence(target, enabled, deps = {}) {
       if (!cancelledRef.current) setState(buildState(models))
     }
 
-    // Batch forecast already contains per-model data — use it directly.
-    // This avoids the per-station Open-Meteo call entirely and never hits rate limits.
-    if (target.batchModels?.length) {
+    // Batch forecast already contains per-model data — use it directly when
+    // we have multiple models. If the batch fell back to a single model (e.g.
+    // MET Norway because both Open-Meteo batches timed out), fall through to
+    // try the per-station ensemble fetch which may return more models.
+    if ((target.batchModels?.length ?? 0) > 1) {
       writeCache(target.lat, target.lon, target.batchModels, nowMs())
       settle(target.batchModels)
       return
@@ -73,14 +73,30 @@ export function useConfidence(target, enabled, deps = {}) {
     if (cached) { settle(cached); return }
 
     setState({ status: 'loading', agreement: null, models: [] })
+    // Fetch WeatherAPI if a key is configured — use cache first to avoid redundant calls
+    const wapiCached = readWeatherApiCache(target.lat, target.lon, nowMs())
+    const wapiPromise = !wapiCached && target.weatherApiKey
+      ? fetchWAPI(target.lat, target.lon, target.tz, target.weatherApiKey)
+          .then((r) => { if (r) writeWeatherApiCache(target.lat, target.lon, r, Date.now()); return r })
+          .catch(() => null)
+      : Promise.resolve(wapiCached ?? null)
+
     Promise.all([
       fetchEnsemble(target.lat, target.lon).catch(() => []),
       fetchNws(target.lat, target.lon).catch(() => null),
+      wapiPromise,
     ])
-      .then(([ensemble, nws]) => {
+      .then(([ensemble, nws, wapi]) => {
+        if (cancelledRef.current) return
+        // WeatherAPI already written to cache above; buildState reads it from cache
         const models = [...ensemble, ...(nws ? [nws] : [])]
         if (!models.length) {
-          if (!cancelledRef.current) setState({ status: 'unavailable', agreement: null, models: [] })
+          // Ensemble also failed (Open-Meteo down). Use the MET Norway batch fallback
+          // rather than showing blank — 1 model with 100% agreement is better than nothing.
+          const stale = readCache(target.lat, target.lon, 0)
+          if (stale?.length) { settle(stale); return }
+          if (target.batchModels?.length) { settle(target.batchModels); return }
+          setState({ status: 'unavailable', agreement: null, models: [] })
           scheduleRetry(cancelledRef)
           return
         }
@@ -89,9 +105,9 @@ export function useConfidence(target, enabled, deps = {}) {
       })
       .catch(() => {
         if (cancelledRef.current) return
-        // Prefer stale cache over blank screen — pass nowMs=0 so TTL is ignored.
         const stale = readCache(target.lat, target.lon, 0)
         if (stale?.length) { settle(stale); return }
+        if (target.batchModels?.length) { settle(target.batchModels); return }
         setState({ status: 'unavailable', agreement: null, models: [] })
         scheduleRetry(cancelledRef)
       })

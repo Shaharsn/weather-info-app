@@ -23,9 +23,10 @@ describe('parseEnsemble', () => {
     expect(ecmwf.hourly['2026-05-30T17:00']).toBe(28.5)
   })
 
-  it('keeps a model that has hourly data even if its daily high is missing', () => {
+  it('derives highC from hourly max when daily high is missing', () => {
     const ukmo = parseEnsemble(raw).find((m) => m.name === 'UKMO (Met Office)')
-    expect(ukmo.highC).toBeNull()
+    // daily max was null → highC derived from max(hourly) = max(27.0, 26.5) = 27.0
+    expect(ukmo.highC).toBe(27.0)
     expect(ukmo.hourly['2026-05-30T16:00']).toBe(27.0)
   })
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { formatTemp } from '../lib/units.js'
 import { useConfidence } from '../hooks/useConfidence.js'
 import { useWunderground } from '../hooks/useWunderground.js'
+import { usePolymarketStatus } from '../hooks/usePolymarket.js'
 import HourlyStrip from './HourlyStrip.jsx'
 import TomorrowPopup from './TomorrowPopup.jsx'
 
@@ -12,7 +13,7 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
   // When a starred row is opened, push it to the front of the Tomorrow.io queue
   // so the chip appears within seconds instead of waiting up to 20+ min.
   useEffect(() => {
-    if (open && isFavourite) onPrioritizeTomorrow?.()
+    if (open) onPrioritizeTomorrow?.()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
   // Show only the unit the market resolves in: °F for US (tenths) stations,
@@ -22,7 +23,7 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
   const hoursToday = row.localTime ? Number(row.localTime.slice(0, 2)) + 1 : 12
   const [selected, setSelected] = useState(null) // selected hour's time string
   const confidence = useConfidence(
-    { lat: row.lat, lon: row.lon, reportsTenths: row.reportsTenths, modelWeights: cityAccuracy, batchModels: row.batchModels },
+    { lat: row.lat, lon: row.lon, tz: row.tz, reportsTenths: row.reportsTenths, modelWeights: cityAccuracy, batchModels: row.batchModels, weatherApiKey: confidenceDeps?.weatherApiKey },
     open,
     confidenceDeps,
   )
@@ -50,16 +51,20 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
   }).formatToParts(new Date())
   const dpv = (t) => dp.find((p) => p.type === t)?.value
   const marketDate = `${dpv('month')} ${dpv('day')}, ${dpv('year')}`
-  const polymarketUrl = `https://polymarket.com/event/highest-temperature-in-${slug}-on-${dpv('month').toLowerCase()}-${dpv('day')}-${dpv('year')}`
+  const polyEventSlug = `highest-temperature-in-${slug}-on-${dpv('month').toLowerCase()}-${dpv('day')}-${dpv('year')}`
+  const polymarketUrl = `https://polymarket.com/event/${polyEventSlug}`
+
+  // Polymarket probability — only fetched for notification-selected rows to avoid
+  // hitting the API for all 45 cities at once.
+  const polyStatus = usePolymarketStatus(polyEventSlug, isNotified)
 
   // External links: WU (wunderground.com) and weather.com, derived from the
   // station's ICAO and WU country code.
   const wuCountry = row.wuCode?.split(':')?.[2]?.toLowerCase() ?? null
   const wuStation = row.icao ?? row.wuCode?.split(':')?.[0] ?? null
-  // Use the /history/daily/ format — this is the actual resolution page Polymarket
-  // links to (shows the final recorded daily high), not the /hourly/ live view.
+  // Use the /hourly/ format for the live hourly forecast/observation view.
   const wuUrl = wuCountry && wuStation
-    ? `https://www.wunderground.com/history/daily/${wuCountry}/${slug}/${wuStation}`
+    ? `https://www.wunderground.com/hourly/${wuCountry}/${slug}/${wuStation}`
     : null
   const weatherComUrl = row.wcId
     ? `https://weather.com/weather/today/l/${row.wcId}`
@@ -168,7 +173,7 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
                 title="Polymarket resolution page (weather.gov)">NWS</a>
             )}
             {wuUrl && (
-              <a className="ext-btn" href={wuUrl} target="_blank" rel="noopener noreferrer" title="Open on Wunderground">UV</a>
+              <a className="ext-btn" href={wuUrl} target="_blank" rel="noopener noreferrer" title="Open hourly forecast on Wunderground">WU</a>
             )}
             {weatherComUrl && (
               <a className="ext-btn" href={weatherComUrl} target="_blank" rel="noopener noreferrer" title="Open on weather.com">WC</a>
@@ -198,6 +203,14 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
               title={`Consensus matched METAR high ${consensusAccuracy.exactPct}% of the time (${consensusAccuracy.total} day${consensusAccuracy.total === 1 ? '' : 's'})`}
             >
               {consensusAccuracy.exactPct}%&thinsp;·&thinsp;{consensusAccuracy.total}d
+            </span>
+          )}
+          {polyStatus?.dominated && (
+            <span
+              className="poly-dominated"
+              title={`Polymarket: one outcome is already at ${Math.round(polyStatus.probability * 100)}% — this city's result may be effectively locked in`}
+            >
+              🔒&thinsp;{Math.round(polyStatus.probability * 100)}%
             </span>
           )}
           {/* Mobile-only: clock + star inline (peak-marker gutter is hidden on mobile) */}
@@ -234,7 +247,6 @@ export default function StationRow({ row, confidenceDeps, wunderDeps, isNotified
             confidence={confidence}
             wuByHour={wuByHour}
             cityAccuracy={cityAccuracy}
-            isFavourite={isFavourite}
             reportsTenths={row.reportsTenths}
             unit={unit}
             selected={selected}

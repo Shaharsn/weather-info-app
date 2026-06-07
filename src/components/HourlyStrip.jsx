@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { formatTemp } from '../lib/units.js'
 import { computeAgreement } from '../lib/agreement.js'
+import { storeForecastHour, recordObservation } from '../lib/hourlyAccuracy.js'
 
 function obsTimeLabel(epochSec) {
   return new Date(epochSec * 1000).toISOString().slice(11, 16) + 'Z'
@@ -26,68 +27,95 @@ function ConsensusTarget({ a, unit }) {
   return <span className="bucket">{a.consensusC}°C</span>
 }
 
-// Default view (no hour selected): the multi-model consensus for today's high.
-const WU_MODEL_NAME = 'WU (IBM)'
-const WU_WEIGHT = 1.0 // starts neutral; accuracy log adjusts after MIN_SAMPLES days
+// Sources that continuously update from real observations (intraday signal).
+// Everything else (ECMWF, GFS, ICON, …) is a static NWP run updated 2–4× per day.
+const DYNAMIC_NAMES = new Set(['Tomorrow.io', 'NWS (US)', 'WeatherAPI'])
 
-function Agreement({ confidence, unit, observedHighC, cityAccuracy = {}, isFavourite = false, wuDayHighC = null, reportsTenths = true }) {
-  if (!confidence || confidence.status === 'idle') return null
-  if (confidence.status === 'loading') {
-    return <div className="agreement muted">Checking model agreement…</div>
-  }
-  if (confidence.status === 'unavailable' || !confidence.agreement) {
-    return <div className="agreement muted">Model agreement unavailable — Open-Meteo rate-limited. Auto-retrying in ~1 min. Click an hour for its sources.</div>
-  }
+// Default view: dynamic sources drive the consensus; NWP shown as background.
+function Agreement({ dynamicAgreement, fullAgreement, staticModels, wuDayHighC, unit, observedHighC, cityAccuracy = {}, strongDynamic = false }) {
+  if (!dynamicAgreement && !fullAgreement && !wuDayHighC) return null
 
-  // Add WU (IBM Weather Company) as a weighted model when its day estimate is available.
-  // WU's own forecast is calibrated against the actual station and is often more
-  // accurate than raw global NWP — especially for coastal stations (Jeddah, Manila, KL).
-  const baseModels = confidence.models || []
-  const allModels = wuDayHighC != null && Number.isFinite(wuDayHighC)
-    ? [...baseModels.filter((m) => m.name !== WU_MODEL_NAME), { name: WU_MODEL_NAME, highC: wuDayHighC }]
-    : baseModels
-  const modelWeights = {
-    'Tomorrow.io': 1.0,           // default premium weight, overridden by accuracy data once 3+ samples exist
-    [WU_MODEL_NAME]: WU_WEIGHT,  // starts neutral
-    ...Object.fromEntries(Object.entries(cityAccuracy).map(([n, s]) => [n, s.weight ?? 1.0])),
-  }
-  // Recompute agreement including WU so it properly affects consensus % and bucket.
-  const a = computeAgreement(allModels, reportsTenths, modelWeights) ?? confidence.agreement
+  // Primary display: dynamic when available, full NWP consensus when not.
+  const a = dynamicAgreement ?? fullAgreement
+  const isDynamic = dynamicAgreement != null
+  // When falling back to NWP-only, don't show them again in the background section.
+  const backgroundModels = isDynamic ? staticModels : []
+  const hasTomorrow = dynamicAgreement?.sites?.some((s) => s.name === 'Tomorrow.io') ||
+                      staticModels.some((s) => s.name === 'Tomorrow.io')
+  const obsExceeds = a != null && observedHighC != null && observedHighC > a.consensusC
 
-  const hasTomorrow = baseModels.some((m) => m.name === 'Tomorrow.io')
-  const obsExceeds = observedHighC != null && observedHighC > a.medianC
   return (
     <div className="agreement">
-      <div className="agreement-head">
-        Models' high median {formatTemp(a.medianC, unit)} → <ConsensusTarget a={a} unit={unit} /> ·{' '}
-        <strong className={`pct ${confidenceClass(a.pct)}`}>
-          {a.agree}/{a.total} ({a.pct}%)
-        </strong>
-        {obsExceeds && (
-          <span className="obs-exceeds"> · observed already {formatTemp(observedHighC, unit)}</span>
-        )}
-        <span className="hint"> · click an hour for its per-source values</span>
-      </div>
-      <div className="agreement-sites">
-        {a.sites.map((s) => {
-          const acc = cityAccuracy[s.name]
-          return (
-            <span key={s.name} className={`vote ${s.agrees ? 'agree' : 'disagree'}`}>
-              {s.name} {formatTemp(s.highC, unit)} <span className="hd-round">→ {targetLabel(s, unit)}</span>
-              {acc && acc.total >= 3 && (
-                <span className="acc-badge" title={`${acc.exactPct}% exact · avg error ${acc.avgDiff != null ? (acc.avgDiff > 0 ? '+' : '') + acc.avgDiff + '°' : 'n/a'} · ${acc.total} days`}>
-                  {acc.exactPct}%{acc.avgDiff != null && acc.total >= 3 ? ` ${acc.avgDiff > 0 ? '+' : ''}${acc.avgDiff}°` : ''}
+      {a ? (
+        <>
+          <div className="agreement-head">
+            {strongDynamic
+              ? <span className="strong-signal">🔥 Strong dynamic consensus:</span>
+              : isDynamic ? 'Dynamic consensus:' : 'Models\' consensus:'}{' '}
+            <ConsensusTarget a={a} unit={unit} /> ·{' '}
+            <strong className={`pct ${confidenceClass(a.pct)}`}>
+              {a.agree}/{a.total} ({a.pct}%)
+            </strong>
+            {a.wuUsedAsTiebreaker && <span className="wu-tiebreaker"> · WU broke tie</span>}
+            {obsExceeds && <span className="obs-exceeds"> · observed already {formatTemp(observedHighC, unit)}</span>}
+            <span className="hint"> · click an hour for its per-source values</span>
+          </div>
+          <div className="agreement-sites">
+            {a.sites.map((s) => {
+              const acc = cityAccuracy[s.name]
+              return (
+                <span key={s.name} className={`vote ${s.agrees ? 'agree' : 'disagree'}`}>
+                  {s.name} {formatTemp(s.highC, unit)} <span className="hd-round">→ {targetLabel(s, unit)}</span>
+                  {acc && acc.total >= 3 && (
+                    <span className="acc-badge" title={`${acc.exactPct}% exact · ${acc.avgDiff != null ? (acc.avgDiff > 0 ? '+' : '') + acc.avgDiff + '°' : ''} · ${acc.total}d`}>
+                      {acc.exactPct}%{acc.avgDiff != null ? ` ${acc.avgDiff > 0 ? '+' : ''}${acc.avgDiff}°` : ''}
+                    </span>
+                  )}
                 </span>
-              )}
-            </span>
-          )
-        })}
-        {isFavourite && !hasTomorrow && (
-          <span className="vote tomorrow-pending" title="Tomorrow.io is fetching for this favourite — will appear within a minute. Check Settings if it never shows.">
-            Tomorrow.io ⏳
-          </span>
-        )}
-      </div>
+              )
+            })}
+            {!hasTomorrow && (
+              <span className="vote tomorrow-pending" title="Tomorrow.io fetching… Add API key in Settings if it never appears.">
+                Tomorrow.io ⏳
+              </span>
+            )}
+            {wuDayHighC != null && (
+              <span className="vote wu-separate" title="WU — tiebreaker only, not counted in N/M">
+                WU {formatTemp(wuDayHighC, unit)}{a.wuUsedAsTiebreaker ? ' → broke tie' : ' (tiebreaker)'}
+              </span>
+            )}
+          </div>
+        </>
+      ) : (
+        // No dynamic sources yet — show WU alone as best available signal
+        wuDayHighC != null ? (
+          <div className="agreement-head">
+            WU forecast: <strong>{formatTemp(wuDayHighC, unit)}</strong>
+            <span className="hint"> · dynamic models loading…</span>
+          </div>
+        ) : null
+      )}
+      {/* NWP background models — collapsed/dimmed when dynamic sources are available */}
+      {backgroundModels.length > 0 && (
+        <details className="nwp-background">
+          <summary className="nwp-summary">
+            NWP background ({backgroundModels.length} models, updated 2–4×/day)
+          </summary>
+          <div className="agreement-sites nwp-sites">
+            {backgroundModels.map((s) => {
+              const acc = cityAccuracy[s.name]
+              return (
+                <span key={s.name} className="vote nwp-vote">
+                  {s.name} {formatTemp(s.highC, unit)}
+                  {acc && acc.total >= 3 && (
+                    <span className="acc-badge">{acc.exactPct}%{acc.avgDiff != null ? ` ${acc.avgDiff > 0 ? '+' : ''}${acc.avgDiff}°` : ''}</span>
+                  )}
+                </span>
+              )
+            })}
+          </div>
+        </details>
+      )}
     </div>
   )
 }
@@ -97,22 +125,27 @@ function HourDetail({ card, models, reportsTenths, unit, wuByHour, cityAccuracy 
   const time = card.time.slice(11, 16)
 
   if (card.observed) {
-    // Show model predictions alongside METAR so you can see which models hit or missed.
+    // Show model predictions alongside METAR sorted by closest match.
     const modelRows = (models || [])
       .map((m) => ({ name: m.name, tempC: m.hourly?.[card.time] }))
       .filter((r) => typeof r.tempC === 'number')
+      .sort((a, b) => Math.abs(a.tempC - card.tempC) - Math.abs(b.tempC - card.tempC))
     return (
       <div className="hour-detail">
-        <div className="hd-head">{time} — Observed (METAR) · model forecasts for comparison</div>
+        <div className="hd-head">{time} — Observed (METAR) · models sorted by closest match</div>
         <div className="hd-rows">
           <span className="hd-row primary">METAR {formatTemp(card.tempC, unit)}</span>
           {modelRows.map((r) => {
             const diff = r.tempC - card.tempC
             const hit = Math.round(r.tempC) === Math.round(card.tempC)
+            const acc = cityAccuracy[r.name]
             return (
               <span key={r.name} className={`hd-row ${hit ? 'agree' : 'disagree'}`}>
                 {r.name} {formatTemp(r.tempC, unit)}
                 <span className="hd-round"> ({diff >= 0 ? '+' : ''}{diff.toFixed(1)}°)</span>
+                {acc && acc.total >= 3 && (
+                  <span className="acc-badge">{acc.exactPct}%</span>
+                )}
               </span>
             )
           })}
@@ -124,23 +157,24 @@ function HourDetail({ card, models, reportsTenths, unit, wuByHour, cityAccuracy 
     )
   }
 
-  // Build rows from model hourly values + WU (IBM) if available for this hour.
-  // WU is already calibrated to the station — include it with its 1.5 premium weight
-  // so it properly shifts the consensus (e.g. 3 models say 33, 3 say 32, WU says 32
-  // → 32 wins with 3×1.0 + 1.5 = 4.5 vs 3×1.0 = 3.0).
+  // Build rows from model hourly values. WU shown separately (not in consensus count).
   const rows = (models || [])
     .map((m) => ({ name: m.name, tempC: m.hourly?.[card.time] }))
     .filter((r) => typeof r.tempC === 'number')
   const wuTempC = wuByHour?.[card.time]
-  if (typeof wuTempC === 'number') rows.push({ name: WU_MODEL_NAME, tempC: wuTempC })
 
-  // Apply same weights as the daily Agreement: accuracy-log first, then explicit premiums.
-  const hourWeights = {
-    'Tomorrow.io': 1.0,
-    [WU_MODEL_NAME]: WU_WEIGHT,
-    ...Object.fromEntries(Object.entries(cityAccuracy).map(([n, s]) => [n, s.weight ?? 1.0])),
-  }
-  const hourAgree = computeAgreement(rows.map((r) => ({ name: r.name, highC: r.tempC })), reportsTenths, hourWeights)
+  // All models equal weight; WU as tiebreaker
+  const hourAgree = computeAgreement(
+    rows.map((r) => ({ name: r.name, highC: r.tempC })),
+    reportsTenths,
+    {},
+    typeof wuTempC === 'number' ? wuTempC : null,
+  )
+
+  // Sort: agreeing models first, then by model name
+  const sortedSites = hourAgree
+    ? [...hourAgree.sites].sort((a, b) => (b.agrees ? 1 : 0) - (a.agrees ? 1 : 0) || a.name.localeCompare(b.name))
+    : []
 
   return (
     <div className="hour-detail">
@@ -152,16 +186,23 @@ function HourDetail({ card, models, reportsTenths, unit, wuByHour, cityAccuracy 
             <strong className={`pct ${confidenceClass(hourAgree.pct)}`}>
               {hourAgree.agree}/{hourAgree.total} ({hourAgree.pct}%)
             </strong>
+            {hourAgree.wuUsedAsTiebreaker && <span className="wu-tiebreaker"> · WU broke tie</span>}
           </>
         )}
       </div>
       {hourAgree ? (
         <div className="hd-rows">
-          {hourAgree.sites.map((s) => (
+          {sortedSites.map((s) => (
             <span key={s.name} className={`hd-row ${s.agrees ? 'agree' : 'disagree'}`}>
               {s.name} {formatTemp(s.highC, unit)} <span className="hd-round">→ {targetLabel(s, unit)}</span>
             </span>
           ))}
+          {/* WU shown separately */}
+          {typeof wuTempC === 'number' && (
+            <span className="hd-row wu-separate" title="WU tiebreaker — not counted in N/M">
+              WU {formatTemp(wuTempC, unit)}{hourAgree.wuUsedAsTiebreaker ? ' → broke tie' : ' (tiebreaker)'}
+            </span>
+          )}
         </div>
       ) : (
         <div className="muted">Per-source values unavailable (forecast service rate-limited).</div>
@@ -172,15 +213,9 @@ function HourDetail({ card, models, reportsTenths, unit, wuByHour, cityAccuracy 
 
 // Per-hour card values: use computeAgreement for each hour so cards always match
 // what the HourDetail panel shows — same function, same inputs, guaranteed consistent.
-// For °C markets: consensusC (whole-°C MODE). For °F markets: continuous median.
-function computeHourlyCardValues(models, wuByHour, cityAccuracy, reportsTenths) {
+// All models equal weight; WU as tiebreaker (not counted in vote).
+function computeHourlyCardValues(models, wuByHour, reportsTenths) {
   if (!models?.length) return {}
-  const hourWeights = {
-    'Tomorrow.io': 1.0,
-    [WU_MODEL_NAME]: WU_WEIGHT,
-    ...Object.fromEntries(Object.entries(cityAccuracy || {}).map(([n, s]) => [n, s.weight ?? 1.0])),
-  }
-  // Collect all time keys from all models + WU
   const allTimes = new Set()
   for (const m of models) for (const t of Object.keys(m.hourly || {})) allTimes.add(t)
   if (wuByHour) for (const t of Object.keys(wuByHour)) allTimes.add(t)
@@ -191,28 +226,29 @@ function computeHourlyCardValues(models, wuByHour, cityAccuracy, reportsTenths) 
       .map((m) => ({ name: m.name, highC: m.hourly?.[time] }))
       .filter((s) => typeof s.highC === 'number')
     const wuC = wuByHour?.[time]
-    if (typeof wuC === 'number') sites.push({ name: WU_MODEL_NAME, highC: wuC })
     if (!sites.length) continue
 
-    if (!reportsTenths) {
-      // °C market: reuse computeAgreement — identical to HourDetail, always consistent
-      const a = computeAgreement(sites, false, hourWeights)
-      result[time] = a ? a.consensusC : Math.round(sites.reduce((s, m) => s + m.highC, 0) / sites.length)
+    // All models equal weight; WU as optional tiebreaker
+    const a = computeAgreement(sites, reportsTenths, {}, typeof wuC === 'number' ? wuC : null)
+    if (a) {
+      if (reportsTenths) {
+        // °F market: convert consensus bucket midpoint back to °C for card storage
+        result[time] = (a.bucketLowF + 0.5 - 32) / 1.8
+      } else {
+        result[time] = a.consensusC
+      }
     } else {
-      // °F market: continuous median (computeAgreement's bucket doesn't map back to °C cleanly)
-      const vals = sites.map((s) => s.highC).sort((a, b) => a - b)
-      const m = Math.floor(vals.length / 2)
-      result[time] = vals.length % 2 ? vals[m] : (vals[m - 1] + vals[m]) / 2
+      result[time] = Math.round(sites.reduce((s, m) => s + m.highC, 0) / sites.length)
     }
   }
   return result
 }
 
-export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = {}, isFavourite = false, reportsTenths, unit = 'both', selected, onSelect, icaoUrl = null, icaoCode = null, wuUrl = null, weatherComUrl = null }) {
-  // Use the ensemble-derived hourly median when available so the card value and
-  // the panel's bucket/median always come from the same data source.
+export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = {}, reportsTenths, unit = 'both', selected, onSelect, icaoUrl = null, icaoCode = null, wuUrl = null, weatherComUrl = null }) {
+  // Use the ensemble-derived hourly consensus when available so the card value
+  // and the panel's consensus always come from the same data source.
   const ensHourly = confidence?.status === 'ready'
-    ? computeHourlyCardValues(confidence.models, wuByHour, cityAccuracy, reportsTenths)
+    ? computeHourlyCardValues(confidence.models, wuByHour, reportsTenths)
     : {}
 
   const withEns = row.hourly.map((h) => ({
@@ -220,18 +256,55 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
     tempC: !h.observed && !h.isNow && ensHourly[h.time] != null ? ensHourly[h.time] : h.tempC,
   }))
 
-  // For °C markets: replace the hottest forecast card with the daily consensus
-  // so it matches the panel. Per-hour MODE can show 36 while the daily HIGH
-  // consensus is 35 (some models peak early at 14:00, others later with lower
-  // overall max). The daily consensus is the number that matters for betting.
-  const dailyConsensusC = !reportsTenths && confidence?.status === 'ready'
-    ? confidence.agreement?.consensusC ?? null
+  // WU full-day high: max across all WU values for TODAY's hours only.
+  const wuAllVals = wuByHour
+    ? row.hourly.map((h) => wuByHour[h.time]).filter((v) => typeof v === 'number' && Number.isFinite(v))
+    : []
+  const wuDayMax = wuAllVals.length ? Math.max(...wuAllVals) : null
+
+  // WU forecast-only high (for tiebreaker in daily consensus below):
+  // use only non-observed hours so WU competes on equal footing with NWP models.
+  const wuForecastVals = row.hourly
+    .filter((h) => !h.observed && wuByHour?.[h.time] != null)
+    .map((h) => wuByHour[h.time])
+    .filter((v) => typeof v === 'number')
+  const wuDayHighC = wuForecastVals.length ? Math.max(...wuForecastVals) : null
+
+  // Split models into dynamic (obs-aware, updates intraday) and static (NWP runs).
+  const allModels = confidence?.status === 'ready' ? (confidence.models ?? []) : []
+  const dynamicModels = allModels.filter((m) => DYNAMIC_NAMES.has(m.name))
+  const staticModels = allModels.filter((m) => !DYNAMIC_NAMES.has(m.name))
+
+  // Dynamic agreement — primary signal when ≥1 dynamic source is available.
+  const dynamicAgreement = confidence?.status === 'ready' && dynamicModels.length >= 1
+    ? computeAgreement(dynamicModels, reportsTenths, {}, wuDayHighC) ?? null
     : null
+
+  // Fallback full agreement (all models) when no dynamic sources loaded yet.
+  const fullAgreement = confidence?.status === 'ready' && allModels.length >= 1
+    ? computeAgreement(allModels, reportsTenths, {}, wuDayHighC) ?? null
+    : null
+
+  // Primary: prefer dynamic; fall back to full (all models including NWP).
+  const finalAgreement = dynamicAgreement ?? fullAgreement
+
+  // Strong dynamic consensus: ≥2 dynamic sources + WU all agree on the same value.
+  const strongDynamic = (() => {
+    if (!dynamicAgreement || dynamicAgreement.total < 2) return false
+    if (dynamicAgreement.pct < 100) return false
+    // If WU is available it must also agree (or used as tiebreaker to reach 100%)
+    if (wuDayHighC != null && !dynamicAgreement.wuUsedAsTiebreaker) {
+      if (Math.round(wuDayHighC) !== dynamicAgreement.consensusC) return false
+    }
+    return true
+  })()
+
+  const dailyConsensusC = !reportsTenths && finalAgreement ? finalAgreement.consensusC : null
 
   const resolvedHourly = (() => {
     if (dailyConsensusC == null) return withEns
     // Find the hottest non-observed forecast hour
-    let hotTime = null, hotVal = -Infinity
+    let hotTime = null; let hotVal = -Infinity
     for (const h of withEns) {
       if (!h.observed && !h.isNow && h.tempC != null && h.tempC > hotVal) {
         hotVal = h.tempC; hotTime = h.time
@@ -249,6 +322,23 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
   const spread = max !== min
   const selectedCard = selected ? resolvedHourly.find((h) => h.time === selected) : null
 
+  // Per-hour accuracy tracking: store consensus forecasts for future hours and
+  // score them against METAR as observations arrive.
+  const observedCount = row.hourly.filter((h) => h.observed).length
+  useEffect(() => {
+    if (confidence?.status !== 'ready') return
+    // Store future-hour forecasts (idempotent — no-op if already stored)
+    for (const [time, consensusC] of Object.entries(ensHourly)) {
+      const h = row.hourly.find((rh) => rh.time === time)
+      if (h && !h.observed && !h.isNow) storeForecastHour(row.city, time, consensusC)
+    }
+    // Score observed hours against stored forecasts (idempotent)
+    for (const h of row.hourly) {
+      if (h.observed && h.tempC != null) recordObservation(row.city, h.time, h.tempC)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confidence?.status, row.city, observedCount])
+
   // Scroll the hours container to the current-hour card on mount so the user
   // sees now/recent hours instead of always starting at 00:00.
   const scrollRef = useRef(null)
@@ -256,26 +346,9 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
     const el = scrollRef.current
     if (!el) return
     const nowCard = el.querySelector('.hour.now, .hour.pending')
-    // Fall back to the last observed card if no now/pending card exists.
     const target = nowCard ?? el.querySelectorAll('.hour.observed')[el.querySelectorAll('.hour.observed').length - 1]
     if (target) target.scrollIntoView?.({ block: 'nearest', inline: 'center', behavior: 'instant' })
   }, [])
-
-  // WU full-day high: max across all WU values for TODAY's hours only.
-  // wuByHour includes tomorrow's forecast (WU 2-day feed), so we must restrict
-  // to time keys that exist in row.hourly (which only contains today's hours).
-  const wuAllVals = wuByHour
-    ? row.hourly.map((h) => wuByHour[h.time]).filter((v) => typeof v === 'number' && Number.isFinite(v))
-    : []
-  const wuDayMax = wuAllVals.length ? Math.max(...wuAllVals) : null
-
-  // For the model consensus chip: use only non-observed forecast hours so WU is
-  // compared to other models on equal footing (all pure forecasts, no observed data).
-  const wuForecastVals = row.hourly
-    .filter((h) => !h.observed && wuByHour?.[h.time] != null)
-    .map((h) => wuByHour[h.time])
-    .filter((v) => typeof v === 'number')
-  const wuDayHighC = wuForecastVals.length ? Math.max(...wuForecastVals) : null
 
   return (
     <div className="hourly-strip">
@@ -288,6 +361,17 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
             WU high <strong>{formatTemp(wuDayMax, unit)}</strong>
             {wuByHour && <span className="wu-live"> · live</span>}
           </span>
+        )}
+        {finalAgreement && (
+          <span className={`app-consensus${strongDynamic ? ' strong' : ''}`} title={strongDynamic ? 'Strong dynamic consensus — all obs-aware sources agree' : 'App consensus (dynamic sources when available, NWP fallback)'}>
+            {strongDynamic ? '🔥 ' : ''}App: <strong>{formatTemp(finalAgreement.consensusC, unit === 'F' ? 'F' : 'C')}</strong>
+          </span>
+        )}
+        {confidence?.status === 'loading' && (
+          <span className="muted obs-time">Loading models…</span>
+        )}
+        {confidence?.status === 'unavailable' && (
+          <span className="muted obs-time">Models unavailable (rate-limited) — retrying</span>
         )}
       </div>
       <div className="hours hours-scroll" ref={scrollRef}>
@@ -303,7 +387,7 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
               key={h.time}
               type="button"
               onClick={() => onSelect?.(h.time)}
-              className={`hour ${kind}${h.pending ? ' pending' : ''}${partial ? ' partial' : ''}${hot ? ' hot' : ''}${cold ? ' cold' : ''}${isSel ? ' selected' : ''}`}
+              className={`hour ${kind}${h.pending ? ' pending' : ''}${partial ? ' partial' : ''}${hot ? ' hot' : ''}${hot && strongDynamic ? ' strong-dynamic' : ''}${cold ? ' cold' : ''}${isSel ? ' selected' : ''}`}
             >
               <span className="hour-label">{h.time.slice(11, 16)}</span>
               <span className="hour-temp">{h.tempC == null ? 'TBD' : formatTemp(h.tempC, unit, unit === 'C' ? 0 : 2)}</span>
@@ -322,7 +406,16 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
       {selectedCard ? (
         <HourDetail card={selectedCard} models={confidence?.models} reportsTenths={reportsTenths} unit={unit} wuByHour={wuByHour} cityAccuracy={cityAccuracy} />
       ) : (
-        <Agreement confidence={confidence} unit={unit} observedHighC={row.observedHighC} cityAccuracy={cityAccuracy} isFavourite={isFavourite} wuDayHighC={wuDayHighC} reportsTenths={reportsTenths} />
+        <Agreement
+          dynamicAgreement={dynamicAgreement}
+          fullAgreement={fullAgreement}
+          staticModels={staticModels}
+          wuDayHighC={wuDayHighC}
+          unit={unit}
+          observedHighC={row.observedHighC}
+          cityAccuracy={cityAccuracy}
+          strongDynamic={strongDynamic}
+        />
       )}
       {(icaoUrl || wuUrl || weatherComUrl) && (
         <div className="ext-links-mobile">
@@ -332,7 +425,7 @@ export default function HourlyStrip({ row, confidence, wuByHour, cityAccuracy = 
           )}
           {wuUrl && (
             <a className="ext-btn" href={wuUrl} target="_blank" rel="noopener noreferrer"
-              title="Open on Wunderground">UV</a>
+              title="Open on Wunderground">WU</a>
           )}
           {weatherComUrl && (
             <a className="ext-btn" href={weatherComUrl} target="_blank" rel="noopener noreferrer"

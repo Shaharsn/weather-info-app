@@ -15,6 +15,7 @@ const INTERVAL_MS = 60 * 60 * 1000 // hourly tick (only writes once per city per
 // observed peak has been confirmed. The old key 'accuracy-logged-hours' (v1)
 // is intentionally different so stale morning-snapshot guards don't block re-logging.
 const DONE_KEY = 'accuracy-logged-days-v2' // { 'city:YYYY-MM-DD': true }
+const LS_LOG_KEY = 'weather-accuracy-log-v1' // localStorage copy (works in production)
 
 function loggedKey(city, date) {
   return `${city}:${date}`
@@ -33,8 +34,22 @@ function markDone(key) {
   } catch { /* ignore */ }
 }
 
-// Post one record to the Vite plugin endpoint.
+// Post one record: always saves to localStorage (works prod+dev), also tries
+// the Vite dev-server endpoint which appends to model-accuracy.jsonl.
 async function logRecord(record) {
+  // localStorage — primary persistence, works everywhere
+  try {
+    const raw = localStorage.getItem(LS_LOG_KEY)
+    const entries = raw ? JSON.parse(raw) : []
+    entries.push(record)
+    // Prune to last 180 days to avoid storage bloat
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 180)
+    const pruned = entries.filter((e) => !e.date || e.date >= cutoff.toISOString().slice(0, 10))
+    localStorage.setItem(LS_LOG_KEY, JSON.stringify(pruned))
+  } catch { /* quota exceeded or SSR */ }
+
+  // Dev server endpoint — appends to model-accuracy.jsonl (no-op in production)
   try {
     await fetch('/api/accuracy-log', {
       method: 'POST',

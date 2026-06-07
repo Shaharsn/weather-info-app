@@ -16,8 +16,9 @@ describe('parseForecast', () => {
 })
 
 describe('parseMultiModelForecast', () => {
-  it('returns the median across models per hour and per day', () => {
+  it('returns the MODE across models per hour and per day', () => {
     // Three models present (the rest of MODELS simply absent -> ignored).
+    // All values in this fixture are unique per slot, so mode picks the lowest tied value.
     const raw = [
       {
         utc_offset_seconds: 0,
@@ -41,10 +42,10 @@ describe('parseMultiModelForecast', () => {
     ]
     const [loc] = parseMultiModelForecast(raw)
     expect(loc.utcOffsetSeconds).toBe(0)
-    expect(loc.currentC).toBe(12) // median(10,12,14)
-    expect(loc.todayHighC).toBe(18) // median(18,16,20)
-    expect(loc.tomorrowHighC).toBe(32) // median(30,34,32)
-    expect(loc.tomorrowLowC).toBe(9) // median(9,7,11)
-    expect(loc.hourly[1]).toEqual({ time: '2026-05-31T01:00', tempC: 22 }) // median(20,22,24)
+    expect(loc.currentC).toBe(10) // mode([10,12,14]) — all unique → lowest
+    expect(loc.todayHighC).toBe(16) // mode([18,16,20]) — all unique → lowest
+    expect(loc.tomorrowHighC).toBe(30) // mode([30,34,32]) — all unique → lowest
+    expect(loc.tomorrowLowC).toBe(7) // mode([9,7,11]) — all unique → lowest
+    expect(loc.hourly[1]).toEqual({ time: '2026-05-31T01:00', tempC: 20 }) // mode([20,22,24]) → lowest
   })
 })

@@ -30,13 +30,20 @@ export function parseEnsemble(raw) {
   if (!loc) return []
   const times = loc.hourly?.time ?? []
   return MODELS.map((m) => {
-    const highC = loc.daily?.[`temperature_2m_max_${m.id}`]?.[0]
+    const rawHigh = loc.daily?.[`temperature_2m_max_${m.id}`]?.[0]
     const temps = loc.hourly?.[`temperature_2m_${m.id}`] ?? []
     const hourly = {}
     times.forEach((t, i) => {
       if (typeof temps[i] === 'number') hourly[t] = temps[i]
     })
-    return { name: m.name, highC: typeof highC === 'number' ? highC : null, hourly }
+    // Fallback: if daily max wasn't returned (some models skip it for certain latitudes),
+    // derive today's high from the first 24 hourly slots (= today with timezone=auto).
+    let highC = typeof rawHigh === 'number' ? rawHigh : null
+    if (highC == null) {
+      const todayVals = temps.slice(0, 24).filter((v) => typeof v === 'number')
+      if (todayVals.length) highC = Math.max(...todayVals)
+    }
+    return { name: m.name, highC, hourly }
   }).filter((m) => m.highC != null || Object.keys(m.hourly).length > 0)
 }
 
@@ -51,5 +58,5 @@ export async function fetchStationEnsemble(lat, lon) {
     timezone: 'auto',
     models: MODELS.map((m) => m.id).join(','),
   })
-  return parseEnsemble(await fetchJson(`https://api.open-meteo.com/v1/forecast?${params}`))
+  return parseEnsemble(await fetchJson(`/api/open-meteo-proxy?${params}`))
 }
